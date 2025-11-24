@@ -1,114 +1,80 @@
 #!/bin/bash
-# Helix V3 Complete Deployment Script
+# Helix V3 Production Deployment via Git
 # Kopiere ALLES und paste es EINMAL in VNC Console
 
 set -e
-cd /opt/helix
 
 echo "🚀 Helix V3 Deployment startet..."
 
-# Check fail2ban
-if command -v fail2ban-client &> /dev/null; then
-    echo "📋 Checking fail2ban..."
-    fail2ban-client status sshd || true
+# Check if directory exists, create if not
+if [ ! -d "/opt/helix" ]; then
+    echo "📁 Creating /opt/helix directory..."
+    mkdir -p /opt/helix
+    cd /opt/helix
+    
+    echo "📥 Cloning repository..."
+    git clone https://github.com/jackl1304/HELIXV3.git .
+else
+    cd /opt/helix
+    echo "📥 Updating repository..."
+    git fetch origin
+    git reset --hard origin/main
 fi
 
-# Install dependencies if needed
-if ! command -v git &> /dev/null; then
-    echo "📦 Installing git..."
-    apt update && apt install -y git curl wget
+# Check if .env exists, if not copy from env.setup
+if [ ! -f ".env" ]; then
+    if [ -f "env.setup" ]; then
+        echo "⚙️ Creating .env from env.setup..."
+        cp env.setup .env
+        echo "⚠️  WICHTIG: Bitte DATABASE_URL in .env konfigurieren!"
+    else
+        echo "⚠️  Keine .env gefunden - bitte manuell erstellen!"
+    fi
 fi
 
-# Create package.json
-cat > package.json << 'EOFPKG'
-{
-  "name": "helix-v3",
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "start": "node server/index.js"
-  },
-  "dependencies": {
-    "@neondatabase/serverless": "^0.10.4",
-    "compression": "^1.7.4",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "drizzle-orm": "^0.38.3",
-    "express": "^4.21.2",
-    "helmet": "^8.0.0",
-    "zod": "^3.24.1"
-  }
-}
-EOFPKG
+# Install Node.js if needed
+if ! command -v node &> /dev/null; then
+    echo "📦 Installing Node.js 20..."
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    apt-get install -y nodejs
+fi
 
-echo "📦 Installing dependencies..."
-npm install
-
-# Create minimal server
-mkdir -p server
-cat > server/index.js << 'EOFSERVER'
-import express from 'express';
-import helmet from 'helmet';
-import compression from 'compression';
-import cors from 'cors';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-app.use(helmet());
-app.use(compression());
-app.use(cors());
-app.use(express.json());
-
-// Health endpoint
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV
-  });
-});
-
-// Dashboard placeholder
-app.get('/', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head><title>Helix V3</title></head>
-    <body>
-      <h1>🎯 Helix V3 - Regulatory Intelligence Platform</h1>
-      <p>Server läuft auf Port ${PORT}</p>
-      <p>Status: <a href="/health">Health Check</a></p>
-      <p>Database: ${process.env.DATABASE_URL ? '✅ Configured' : '❌ Not configured'}</p>
-    </body>
-    </html>
-  `);
-});
-
-// API stub
-app.get('/api/dashboard/stats', (req, res) => {
-  res.json({
-    totalUpdates: 0,
-    totalLegalCases: 0,
-    activeDataSources: 0,
-    totalPatents: 0
-  });
-});
-
-app.listen(PORT, () => {
-  console.log(`✅ Helix V3 server running on port ${PORT}`);
-  console.log(`   Health: http://localhost:${PORT}/health`);
-  console.log(`   Dashboard: http://localhost:${PORT}/`);
-});
-EOFSERVER
+# Install PM2 if needed
+if ! command -v pm2 &> /dev/null; then
+    echo "📦 Installing PM2..."
+    npm install -g pm2
+fi
 
 echo "▶️ Starting with PM2..."
-pm2 delete helix 2>/dev/null || true
-pm2 start server/index.js --name helix --env production
+pm2 delete helix-app 2>/dev/null || true
+pm2 start dist/index.js --name helix-app --node-args="--max-old-space-size=2048"
 pm2 save
+pm2 startup
+
+echo ""
+echo "📊 PM2 Status:"
+pm2 status
+
+echo ""
+echo "🏥 Testing health endpoint..."
+sleep 3
+curl -f http://localhost:5000/health || echo "⚠️  Health check failed"
+
+echo ""
+echo "✅ Deployment abgeschlossen!"
+echo "🌐 Server sollte erreichbar sein unter: http://152.53.191.99:5000/"
+echo ""
+echo "📝 Wichtige Befehle:"
+echo "  - Status: pm2 status"
+echo "  - Logs: pm2 logs helix-app"
+echo "  - Restart: pm2 restart helix-app"
+echo "  - Stop: pm2 stop helix-app"
+echo "  - Update: cd /opt/helix && git pull && pm2 restart helix-app"
+echo ""
+echo "⚙️  Falls Server nicht läuft:"
+echo "  1. Prüfe .env Datei: cat /opt/helix/.env"
+echo "  2. Prüfe Logs: pm2 logs helix-app --lines 50"
+echo "  3. Manueller Start: cd /opt/helix && node dist/index.js"
 
 echo "📊 Status:"
 pm2 status

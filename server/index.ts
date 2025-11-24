@@ -231,6 +231,65 @@ setImmediate(async () => {
       { id: 'clinicaltrials', name: 'ClinicalTrials.gov', url: 'https://clinicaltrials.gov', type: 'research', status: 'active', region: 'Global', country: 'GLOBAL' },
       { id: 'eudract', name: 'EU Clinical Trials Register', url: 'https://www.clinicaltrialsregister.eu', type: 'research', status: 'active', region: 'EU', country: 'EU' },
       { id: 'pubmed', name: 'PubMed Medical Research', url: 'https://pubmed.ncbi.nlm.nih.gov', type: 'research', status: 'active', region: 'Global', country: 'GLOBAL' },
+      
+      // PATENTS - Global Patent Databases
+      { id: 'uspto', name: 'USPTO United States Patent Office', url: 'https://www.uspto.gov', type: 'patents', status: 'active', region: 'US', country: 'US' },
+      { id: 'uspto_search', name: 'USPTO Patent Search', url: 'https://ppubs.uspto.gov/pubwebapp/', type: 'patents', status: 'active', region: 'US', country: 'US' },
+      { id: 'epo', name: 'European Patent Office (EPO)', url: 'https://www.epo.org', type: 'patents', status: 'active', region: 'EU', country: 'EU' },
+      { id: 'espacenet', name: 'Espacenet Patent Search', url: 'https://worldwide.espacenet.com', type: 'patents', status: 'active', region: 'Global', country: 'GLOBAL' },
+      { id: 'wipo', name: 'WIPO Patent Database', url: 'https://www.wipo.int/portal/en/', type: 'patents', status: 'active', region: 'Global', country: 'GLOBAL' },
+      { id: 'patentscope', name: 'WIPO PATENTSCOPE', url: 'https://patentscope.wipo.int', type: 'patents', status: 'active', region: 'Global', country: 'GLOBAL' },
+      { id: 'dpma', name: 'DPMA German Patent Office', url: 'https://www.dpma.de', type: 'patents', status: 'active', region: 'EU', country: 'DE' },
+      { id: 'depatisnet', name: 'DEPATISnet Patent Search', url: 'https://depatisnet.dpma.de', type: 'patents', status: 'active', region: 'EU', country: 'DE' },
+      { id: 'jpo', name: 'JPO Japan Patent Office', url: 'https://www.jpo.go.jp', type: 'patents', status: 'active', region: 'Asia', country: 'JP' },
+      { id: 'cnipa', name: 'CNIPA China Patent Office', url: 'https://www.cnipa.gov.cn', type: 'patents', status: 'active', region: 'Asia', country: 'CN' },
+      { id: 'kipo', name: 'KIPO Korean Patent Office', url: 'https://www.kipo.go.kr', type: 'patents', status: 'active', region: 'Asia', country: 'KR' },
+      { id: 'ip_australia', name: 'IP Australia Patents', url: 'https://www.ipaustralia.gov.au', type: 'patents', status: 'active', region: 'Oceania', country: 'AU' },
+      { id: 'cipo', name: 'CIPO Canadian Patent Office', url: 'https://www.ic.gc.ca/eic/site/cipointernet-internetopic.nsf/eng/home', type: 'patents', status: 'active', region: 'Americas', country: 'CA' },
+      { id: 'ukipo', name: 'UK Intellectual Property Office', url: 'https://www.gov.uk/government/organisations/intellectual-property-office', type: 'patents', status: 'active', region: 'UK', country: 'GB' },
+      { id: 'google_patents', name: 'Google Patents', url: 'https://patents.google.com', type: 'patents', status: 'active', region: 'Global', country: 'GLOBAL' },
+      { id: 'lens_patents', name: 'Lens.org Patent Database', url: 'https://www.lens.org/lens/search/patent/list', type: 'patents', status: 'active', region: 'Global', country: 'GLOBAL' },
+      
+      // LEGAL CASES - Medical Device & Pharma Litigation
+      { id: 'pacer', name: 'PACER Federal Court Cases', url: 'https://pacer.uscourts.gov', type: 'legal', status: 'active', region: 'US', country: 'US' },
+      { id: 'justia', name: 'Justia Case Law', url: 'https://law.justia.com', type: 'legal', status: 'active', region: 'US', country: 'US' },
+      { id: 'courtlistener', name: 'CourtListener Legal Database', url: 'https://www.courtlistener.com', type: 'legal', status: 'active', region: 'US', country: 'US' },
+      { id: 'leagle', name: 'Leagle Legal Search', url: 'https://www.leagle.com', type: 'legal', status: 'active', region: 'US', country: 'US' },
+      { id: 'casetext', name: 'Casetext Legal Research', url: 'https://casetext.com', type: 'legal', status: 'active', region: 'US', country: 'US' },
+      { id: 'bailii', name: 'BAILII UK & Ireland Cases', url: 'https://www.bailii.org', type: 'legal', status: 'active', region: 'UK', country: 'GB' },
+      { id: 'canlii', name: 'CanLII Canadian Legal Database', url: 'https://www.canlii.org', type: 'legal', status: 'active', region: 'Americas', country: 'CA' },
+      { id: 'austlii', name: 'AustLII Australian Legal Database', url: 'http://www.austlii.edu.au', type: 'legal', status: 'active', region: 'Oceania', country: 'AU' },
+      { id: 'eur_lex', name: 'EUR-Lex EU Law Database', url: 'https://eur-lex.europa.eu', type: 'legal', status: 'active', region: 'EU', country: 'EU' },
+      { id: 'curia', name: 'CURIA EU Court Cases', url: 'https://curia.europa.eu', type: 'legal', status: 'active', region: 'EU', country: 'EU' },
+      { id: 'bverfg', name: 'BVerfG German Constitutional Court', url: 'https://www.bundesverfassungsgericht.de', type: 'legal', status: 'active', region: 'EU', country: 'DE' },
+      { id: 'bgh', name: 'BGH German Federal Court', url: 'https://www.bundesgerichtshof.de', type: 'legal', status: 'active', region: 'EU', country: 'DE' },
+      { id: 'juris', name: 'juris German Legal Database', url: 'https://www.juris.de', type: 'legal', status: 'active', region: 'EU', country: 'DE' },
+      { id: 'legifrance', name: 'Légifrance French Legal Database', url: 'https://www.legifrance.gouv.fr', type: 'legal', status: 'active', region: 'EU', country: 'FR' },
+      { id: 'supremecourt', name: 'US Supreme Court Decisions', url: 'https://www.supremecourt.gov', type: 'legal', status: 'active', region: 'US', country: 'US' },
+      { id: 'findlaw', name: 'FindLaw Legal Resources', url: 'https://www.findlaw.com', type: 'legal', status: 'active', region: 'US', country: 'US' },
+      
+      // PROJECT MANAGEMENT & STANDARDS
+      { id: 'iso_standards', name: 'ISO International Standards', url: 'https://www.iso.org/standards.html', type: 'standards', status: 'active', region: 'Global', country: 'GLOBAL' },
+      { id: 'iec_standards', name: 'IEC Electrotechnical Standards', url: 'https://www.iec.ch/homepage', type: 'standards', status: 'active', region: 'Global', country: 'GLOBAL' },
+      { id: 'astm', name: 'ASTM International Standards', url: 'https://www.astm.org', type: 'standards', status: 'active', region: 'Global', country: 'GLOBAL' },
+      { id: 'din', name: 'DIN German Standards', url: 'https://www.din.de', type: 'standards', status: 'active', region: 'EU', country: 'DE' },
+      { id: 'bsi_standards', name: 'BSI British Standards', url: 'https://www.bsigroup.com', type: 'standards', status: 'active', region: 'UK', country: 'GB' },
+      { id: 'ansi', name: 'ANSI American Standards', url: 'https://www.ansi.org', type: 'standards', status: 'active', region: 'US', country: 'US' },
+      { id: 'cen_cenelec', name: 'CEN-CENELEC EU Standards', url: 'https://www.cencenelec.eu', type: 'standards', status: 'active', region: 'EU', country: 'EU' },
+      { id: 'aami', name: 'AAMI Medical Device Standards', url: 'https://www.aami.org', type: 'standards', status: 'active', region: 'Global', country: 'GLOBAL' },
+      { id: 'nist', name: 'NIST Standards & Technology', url: 'https://www.nist.gov', type: 'standards', status: 'active', region: 'US', country: 'US' },
+      
+      // RECALL & SAFETY MONITORING
+      { id: 'safecar', name: 'NHTSA SaferCar Recalls', url: 'https://www.nhtsa.gov/recalls', type: 'safety', status: 'active', region: 'US', country: 'US' },
+      { id: 'cpsc', name: 'CPSC Consumer Product Safety', url: 'https://www.cpsc.gov', type: 'safety', status: 'active', region: 'US', country: 'US' },
+      { id: 'rapex', name: 'EU RAPEX Safety Alerts', url: 'https://ec.europa.eu/safety-gate', type: 'safety', status: 'active', region: 'EU', country: 'EU' },
+      
+      // INDUSTRY NEWS & INTELLIGENCE
+      { id: 'meddeviceonline', name: 'Medical Device Online', url: 'https://www.meddeviceonline.com', type: 'news', status: 'active', region: 'Global', country: 'GLOBAL' },
+      { id: 'massdevice', name: 'MassDevice News', url: 'https://www.massdevice.com', type: 'news', status: 'active', region: 'Global', country: 'GLOBAL' },
+      { id: 'mddi', name: 'MDDI Medical Device & Diagnostic', url: 'https://www.mddionline.com', type: 'news', status: 'active', region: 'Global', country: 'GLOBAL' },
+      { id: 'devicetalk', name: 'DeviceTalks Industry News', url: 'https://www.devicetalks.com', type: 'news', status: 'active', region: 'Global', country: 'GLOBAL' },
+      { id: 'regulatory_focus', name: 'RAPS Regulatory Focus', url: 'https://www.raps.org/news-and-articles/news-articles', type: 'news', status: 'active', region: 'Global', country: 'GLOBAL' },
     ];
     
     let added = 0;

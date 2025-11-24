@@ -81,11 +81,7 @@ async function buildForProduction() {
         'import.meta.url': 'import.meta.url'
       },
       banner: {
-        js: `
-// Production build banner
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-        `.trim()
+        js: ''
       }
     });
 
@@ -113,7 +109,7 @@ const require = createRequire(import.meta.url);
         'nodemailer','@anthropic-ai/sdk','openai','@sendgrid/mail','winston','pg','@neondatabase/serverless','passport','passport-local','express-session','connect-pg-simple','memorystore'
         ,'lightningcss','@babel/preset-typescript','@babel/preset-typescript/package.json'
       ],
-      banner: { js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);` }
+      banner: { js: '' }
     });
 
     // 3. Create a minimal package.json for production

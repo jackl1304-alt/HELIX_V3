@@ -65,13 +65,13 @@ export default function RegulatoryUpdates() {
 
   // Filter updates
   const filteredUpdates = updatesArray.filter(update => {
-    const matchesSearch = searchTerm === "" || 
+    const matchesSearch = searchTerm === "" ||
       update.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       update.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesRegion = selectedRegion === "all" || update.region === selectedRegion;
     const matchesPriority = selectedPriority === "all" || update.priority === selectedPriority;
-    
+
     return matchesSearch && matchesRegion && matchesPriority;
   });
 
@@ -110,7 +110,7 @@ export default function RegulatoryUpdates() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
               <label className="text-sm font-medium">Priorität</label>
               <Select value={selectedPriority} onValueChange={setSelectedPriority}>
@@ -126,7 +126,7 @@ export default function RegulatoryUpdates() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="md:col-span-2">
               <label className="text-sm font-medium">Suche</label>
               <div className="relative">
@@ -172,8 +172,8 @@ export default function RegulatoryUpdates() {
           ) : (
             <div className="space-y-4">
               {filteredUpdates.map((update) => (
-                <div 
-                  key={update.id} 
+                <div
+                  key={update.id}
                   className="p-6 border rounded-lg hover:shadow-md transition-shadow cursor-pointer"
                   onClick={() => setLocation(`/regulatory-updates/${update.id}`)}
                 >
@@ -191,11 +191,11 @@ export default function RegulatoryUpdates() {
                         </Badge>
                       </div>
                     </div>
-                    
+
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {update.description.split('\n')[0]}
                     </p>
-                    
+
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-3 text-muted-foreground">
                         <span className="flex items-center gap-1">

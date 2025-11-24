@@ -14,14 +14,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { 
-  Users, 
-  UserPlus, 
-  Edit, 
-  Trash2, 
-  Shield, 
-  Crown, 
-  Eye, 
+import {
+  Users,
+  UserPlus,
+  Edit,
+  Trash2,
+  Shield,
+  Crown,
+  Eye,
   Mail,
   Calendar,
   Activity,
@@ -255,13 +255,13 @@ export default function UserManagement() {
   });
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = searchQuery === "" || 
+    const matchesSearch = searchQuery === "" ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.lastName?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesRole = roleFilter === "all" || user.role === roleFilter;
-    
+
     return matchesSearch && matchesRole;
   });
 
@@ -310,7 +310,7 @@ export default function UserManagement() {
             Verwalten Sie Benutzer, Rollen und Berechtigungen
           </p>
         </div>
-        
+
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -355,7 +355,7 @@ export default function UserManagement() {
                     )}
                   />
                 </div>
-                
+
                 <FormField
                   control={form.control}
                   name="email"
@@ -369,7 +369,7 @@ export default function UserManagement() {
                     </FormItem>
                   )}
                 />
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -393,7 +393,7 @@ export default function UserManagement() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="isActive"
@@ -415,11 +415,11 @@ export default function UserManagement() {
                     )}
                   />
                 </div>
-                
+
                 <div className="flex justify-end space-x-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={() => setIsCreateDialogOpen(false)}
                   >
                     Abbrechen
@@ -487,8 +487,8 @@ export default function UserManagement() {
                         <div className="flex items-center space-x-3">
                           <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
                             {user.profileImageUrl ? (
-                              <img 
-                                src={user.profileImageUrl} 
+                              <img
+                                src={user.profileImageUrl}
                                 alt={`${user.firstName} ${user.lastName}`}
                                 className="w-8 h-8 rounded-full"
                               />
@@ -657,7 +657,7 @@ export default function UserManagement() {
                   )}
                 />
               </div>
-              
+
               <FormField
                 control={form.control}
                 name="email"
@@ -671,7 +671,7 @@ export default function UserManagement() {
                   </FormItem>
                 )}
               />
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -695,7 +695,7 @@ export default function UserManagement() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="isActive"
@@ -717,11 +717,11 @@ export default function UserManagement() {
                   )}
                 />
               </div>
-              
+
               <div className="flex justify-end space-x-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setIsEditDialogOpen(false)}
                 >
                   Abbrechen

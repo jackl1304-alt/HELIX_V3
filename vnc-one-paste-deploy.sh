@@ -11,7 +11,7 @@ if [ ! -d "/opt/helix" ]; then
     echo "📁 Creating /opt/helix directory..."
     mkdir -p /opt/helix
     cd /opt/helix
-    
+
     echo "📥 Cloning repository..."
     git clone https://github.com/jackl1304/HELIXV3.git .
 else

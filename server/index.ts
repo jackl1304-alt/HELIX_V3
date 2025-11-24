@@ -122,6 +122,28 @@ setImmediate(() => {
     .then(() => console.log('✅ Daily sync scheduler started successfully'))
     .catch(error => console.error('⚠️ Daily sync scheduler failed:', error));
 });
+
+// Ensure required data_sources exist on startup
+setImmediate(async () => {
+  try {
+    const { storage } = await import('./storage.js');
+    const requiredSources = [
+      { id: 'fda_pma', name: 'FDA PMA Database', url: 'https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpma/pma.cfm', type: 'regulatory', status: 'active' },
+      { id: 'fda_510k', name: 'FDA 510(k) Database', url: 'https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpmn/pmn.cfm', type: 'regulatory', status: 'active' },
+      { id: 'ema_epar', name: 'EMA EPAR Database', url: 'https://www.ema.europa.eu/en/medicines/human/EPAR', type: 'regulatory', status: 'active' },
+      { id: 'health_canada', name: 'Health Canada Medical Devices', url: 'https://health-products.canada.ca/api/medical-devices/', type: 'regulatory', status: 'active' },
+      { id: 'fda_maude', name: 'FDA MAUDE Database', url: 'https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfmaude/search.cfm', type: 'regulatory', status: 'active' },
+    ];
+    
+    for (const source of requiredSources) {
+      await storage.createDataSource(source).catch(() => {}); // Ignore conflicts
+    }
+    console.log('✅ Required data sources verified');
+  } catch (error) {
+    console.warn('⚠️ Could not verify data sources:', error);
+  }
+});
+
 // Start 30-Minuten Quellen-Import Scheduler
 setImmediate(() => {
   startSourceImportScheduler();

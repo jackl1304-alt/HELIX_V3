@@ -17,10 +17,10 @@ interface TenantAuthProps {
   colorScheme?: 'blue' | 'purple' | 'green';
 }
 
-export default function TenantAuth({ 
-  tenantSubdomain, 
+export default function TenantAuth({
+  tenantSubdomain,
   tenantName,
-  colorScheme = 'blue' 
+  colorScheme = 'blue'
 }: TenantAuthProps) {
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState('');
@@ -81,15 +81,15 @@ export default function TenantAuth({
       }
 
       const userData = await response.json();
-      
+
       // Store user session
       localStorage.setItem('tenant_user', JSON.stringify(userData));
-      
+
       // Small delay to ensure localStorage is set before navigation
       setTimeout(() => {
         setLocation('/tenant/dashboard');
       }, 150);
-      
+
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.message || t('auth.loginFailed'));
@@ -107,27 +107,27 @@ export default function TenantAuth({
   return (
     <div className="custom-cursor min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 flex items-center justify-center p-6 relative">
       <CustomCursor />
-      
+
       {/* Language Selector - Top Right */}
       <div className="fixed top-4 right-4 z-50">
         <LanguageSelector />
       </div>
-      
+
       <div className="w-full max-w-md space-y-8">
         {/* Tenant Header */}
         <div className="text-center">
           <div className={`emotional-float mx-auto w-16 h-16 bg-gradient-to-r ${colors.primary} rounded-2xl shadow-xl flex items-center justify-center mb-6`}>
             <Building className="h-8 w-8 text-white" />
           </div>
-          
+
           <h1 className="headline-section text-3xl mb-2">
             {tenantName}
           </h1>
-          
+
           <p className="text-muted-foreground text-lg">
             Secure Tenant Login
           </p>
-          
+
           <div className="flex justify-center gap-3 mt-4">
             <Badge variant="outline" className="emotional-pulse px-3 py-1">
               <Shield className="h-3 w-3 mr-1" />
@@ -148,7 +148,7 @@ export default function TenantAuth({
               Zugang zu Ihrem personalisierten Helix-Bereich
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2">
@@ -167,7 +167,7 @@ export default function TenantAuth({
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="password">Passwort</Label>
                 <div className="relative">

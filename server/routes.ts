@@ -1107,6 +1107,33 @@ Diese Entscheidung betrifft tausende Software-Entwickler in der EU und erfordert
     });
   }
 
+  // Fix missing data sources endpoint
+  app.post("/api/fix-data-sources", async (req, res) => {
+    try {
+      const requiredSources = [
+        { id: 'fda_pma', name: 'FDA PMA Database', url: 'https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpma/pma.cfm', type: 'regulatory', status: 'active' },
+        { id: 'fda_510k', name: 'FDA 510(k) Database', url: 'https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpmn/pmn.cfm', type: 'regulatory', status: 'active' },
+        { id: 'ema_epar', name: 'EMA EPAR Database', url: 'https://www.ema.europa.eu/en/medicines/human/EPAR', type: 'regulatory', status: 'active' },
+        { id: 'health_canada', name: 'Health Canada Medical Devices', url: 'https://health-products.canada.ca/api/medical-devices/', type: 'regulatory', status: 'active' },
+        { id: 'fda_maude', name: 'FDA MAUDE Database', url: 'https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfmaude/search.cfm', type: 'regulatory', status: 'active' },
+      ];
+
+      const results = [];
+      for (const source of requiredSources) {
+        try {
+          await dbStorage.createDataSource(source);
+          results.push({ id: source.id, status: 'added' });
+        } catch (error: any) {
+          results.push({ id: source.id, status: 'error', message: error.message });
+        }
+      }
+
+      res.json({ success: true, results });
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to fix data sources", message: err.message });
+    }
+  });
+
   // Projektakte Endpoints (MDR 2017/745 Documentation)
   app.post("/api/projektakte/create", async (req, res) => {
     try {

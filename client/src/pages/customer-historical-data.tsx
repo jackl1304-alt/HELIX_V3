@@ -37,17 +37,17 @@ export default function CustomerHistoricalData() {
   const [selectedYear, setSelectedYear] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  
+
   const params = useParams();
   const tenantId = params.tenantId;
   const { t } = useLanguage();
 
   // Use live tenant permissions hook for real-time updates
-  const { 
-    permissions: livePermissions, 
-    tenantName: liveTenantName, 
-    isLoading: isTenantLoading 
-  } = useLiveTenantPermissions({ 
+  const {
+    permissions: livePermissions,
+    tenantName: liveTenantName,
+    isLoading: isTenantLoading
+  } = useLiveTenantPermissions({
     tenantId,
     pollInterval: 3000
   });
@@ -108,12 +108,12 @@ export default function CustomerHistoricalData() {
         <div className="fixed top-4 right-4 z-50">
           <LanguageSelector />
         </div>
-        
-        <CustomerNavigation 
-          permissions={permissions} 
-          tenantName={liveTenantName || "Customer Portal"} 
+
+        <CustomerNavigation
+          permissions={permissions}
+          tenantName={liveTenantName || "Customer Portal"}
         />
-        
+
         <main className="ml-64 flex-1 flex items-center justify-center">
           <Card className="max-w-md">
             <CardHeader>
@@ -124,7 +124,7 @@ export default function CustomerHistoricalData() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                Sie haben keine Berechtigung für den Zugriff auf Historische Daten. 
+                Sie haben keine Berechtigung für den Zugriff auf Historische Daten.
                 Kontaktieren Sie Ihren Administrator für weitere Informationen.
               </p>
             </CardContent>
@@ -167,12 +167,12 @@ export default function CustomerHistoricalData() {
       <div className="fixed top-4 right-4 z-50">
         <LanguageSelector />
       </div>
-      
-      <CustomerNavigation 
-        permissions={permissions} 
-        tenantName={liveTenantName || "Customer Portal"} 
+
+      <CustomerNavigation
+        permissions={permissions}
+        tenantName={liveTenantName || "Customer Portal"}
       />
-      
+
       <main className="ml-64 flex-1 p-8 overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
@@ -246,7 +246,7 @@ export default function CustomerHistoricalData() {
                   </Button>
                 </div>
               </div>
-              
+
               {/* Date Range */}
               <div className="grid gap-4 md:grid-cols-2 mt-4">
                 <div>
@@ -309,7 +309,7 @@ export default function CustomerHistoricalData() {
                           <span>{new Date(record.archived_at).toLocaleDateString('de-DE')}</span>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
                         <div className="flex items-center space-x-1">
                           <Globe className="w-4 h-4" />
@@ -331,7 +331,7 @@ export default function CustomerHistoricalData() {
                         <span className="text-gray-500">{record.download_count} Downloads</span>
                       </div>
                     </div>
-                    
+
                     {record.tags && record.tags.length > 0 && (
                       <div className="mt-4">
                         <div className="flex flex-wrap gap-1">
@@ -348,7 +348,7 @@ export default function CustomerHistoricalData() {
                         </div>
                       </div>
                     )}
-                    
+
                     <div className="flex gap-2 mt-4">
                       <Button variant="outline" size="sm" className="flex-1">
                         <FileText className="w-4 h-4 mr-1" />
@@ -371,8 +371,8 @@ export default function CustomerHistoricalData() {
                   Keine historischen Daten verfügbar
                 </h3>
                 <p className="text-gray-500">
-                  {searchTerm || selectedCategory !== 'all' || selectedRegion !== 'all' || selectedYear !== 'all' 
-                    ? 'Ihre Suchkriterien ergaben keine Treffer.' 
+                  {searchTerm || selectedCategory !== 'all' || selectedRegion !== 'all' || selectedYear !== 'all'
+                    ? 'Ihre Suchkriterien ergaben keine Treffer.'
                     : 'Aktuell sind keine historischen Daten verfügbar.'}
                 </p>
               </CardContent>

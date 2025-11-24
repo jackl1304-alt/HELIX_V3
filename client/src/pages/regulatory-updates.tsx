@@ -230,9 +230,11 @@ export default function RegulatoryUpdates() {
                             {update.title}
                             {update.fda_k_number && ` (${update.fda_k_number})`}
                           </CardTitle>
-                          <Badge variant="default" className="bg-green-600">
-                            Neuig
-                          </Badge>
+                          {isNewUpdate(update.published_date || update.created_at) && (
+                            <Badge variant="default" className="bg-green-600">
+                              Neu
+                            </Badge>
+                          )}
                           {update.jurisdiction && (
                             <Badge variant="outline">
                               {update.jurisdiction}

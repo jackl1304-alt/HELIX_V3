@@ -16,8 +16,8 @@ import { startSourceImportScheduler, getSchedulerStatus, runImmediateImportCycle
 import { sanitizeObjectDeep } from '../client/src/lib/neutralTerms';
 
 // Windows-kompatible __dirname für ES-Module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = createServer(app);

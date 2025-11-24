@@ -23,8 +23,8 @@ export function log(message: string, source = "vite") {
 export async function setupVite(app: Express, server: Server): Promise<void> {
   try {
     // Resolve the correct root path for client directory
-    const clientRoot = path.resolve(import.meta.dirname, "..", "client");
-    const projectRoot = path.resolve(import.meta.dirname, "..");
+    const clientRoot = path.resolve(process.cwd(), "client");
+    const projectRoot = process.cwd();
 
     const vite = await createViteServer({
       ...viteConfig,
@@ -62,8 +62,7 @@ export async function setupVite(app: Express, server: Server): Promise<void> {
 
       try {
         const clientTemplate = path.resolve(
-          import.meta.dirname,
-          "..",
+          process.cwd(),
           "client",
           "index.html"
         );
@@ -90,7 +89,7 @@ export async function setupVite(app: Express, server: Server): Promise<void> {
 }
 
 export function serveStatic(app: Express): void {
-  const distPath = path.resolve(import.meta.dirname, "..", "dist", "public");
+  const distPath = path.resolve(process.cwd(), "dist", "public");
 
   if (!fs.existsSync(distPath)) {
     log(`Build directory not found: ${distPath}`, "warning");

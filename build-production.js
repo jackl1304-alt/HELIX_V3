@@ -43,7 +43,7 @@ async function buildForProduction() {
       bundle: true,
       platform: 'node',
       target: 'node20',
-      format: 'esm',
+      format: 'cjs',
       outdir: 'dist',
       external: [
         // Keep ONLY Node.js built-ins external - bundle everything else
@@ -58,12 +58,7 @@ async function buildForProduction() {
         'import.meta.url': 'import.meta.url'
       },
       banner: {
-        js: `import { createRequire as __helix_createRequire } from 'module';
-import { fileURLToPath as __helix_fileURLToPath } from 'url';
-import { dirname as __helix_dirname } from 'path';
-const require = __helix_createRequire(import.meta.url);
-const __filename = __helix_fileURLToPath(import.meta.url);
-const __dirname = __helix_dirname(__filename);`
+        js: ''
       }
     });
 
@@ -112,7 +107,6 @@ const __dirname = __helix_dirname(__filename);`
     const prodPackage = {
       name: originalPkg.name,
       version: originalPkg.version,
-      type: 'module',
       scripts: {
         start: 'node index.js'
       },

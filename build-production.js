@@ -45,6 +45,7 @@ async function buildForProduction() {
       target: 'node20',
       format: 'cjs',
       outdir: 'dist',
+      outExtension: { '.js': '.cjs' },
       external: [
         // Keep ONLY Node.js built-ins external - bundle everything else
         'fs', 'path', 'http', 'https', 'crypto', 'os', 'url', 'util', 
@@ -108,7 +109,7 @@ const __dirname = __helix_dirname(__filename);`
       name: originalPkg.name,
       version: originalPkg.version,
       scripts: {
-        start: 'node index.js'
+        start: 'node index.cjs'
       },
       dependencies: prodDependencies
     };
@@ -134,7 +135,7 @@ const __dirname = __helix_dirname(__filename);`
 
     log('✅ Production build completed successfully!');
     log('📦 Build artifacts:');
-    log('  - dist/index.js (server bundle)');
+    log('  - dist/index.cjs (server bundle)');
     log('  - dist/public/ (frontend assets)');
     log('  - dist/package.json (production dependencies)');
     log('  - dist/import-scripts/* (gebündelte Import-Skripte)');

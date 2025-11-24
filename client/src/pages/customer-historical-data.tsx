@@ -12,9 +12,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { Calendar, Clock, Archive, Download, Search, Filter, FileText, Globe, TrendingUp } from "@/components/icons";
 
-// Mock tenant ID
-const mockTenantId = "030d3e01-32c4-4f95-8d54-98be948e8d4b";
-
 interface HistoricalRecord {
   id: string;
   title: string;
@@ -42,7 +39,7 @@ export default function CustomerHistoricalData() {
   const [endDate, setEndDate] = useState('');
   
   const params = useParams();
-  const tenantId = params.tenantId || mockTenantId;
+  const tenantId = params.tenantId;
   const { t } = useLanguage();
 
   // Use live tenant permissions hook for real-time updates

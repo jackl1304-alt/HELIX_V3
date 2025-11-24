@@ -18,8 +18,8 @@ interface TenantAuthProps {
 }
 
 export default function TenantAuth({ 
-  tenantSubdomain = 'demo', 
-  tenantName = 'Demo Tenant',
+  tenantSubdomain, 
+  tenantName,
   colorScheme = 'blue' 
 }: TenantAuthProps) {
   const [, setLocation] = useLocation();
@@ -221,21 +221,6 @@ export default function TenantAuth({
                 )}
               </Button>
             </form>
-
-            {/* Demo Access */}
-            <div className="mt-6 pt-6 border-t">
-              <Button
-                variant="outline"
-                className="w-full cursor-hover"
-                onClick={handleDemo}
-                data-testid="button-demo"
-              >
-                Demo-Zugang verwenden
-              </Button>
-              <p className="text-xs text-muted-foreground text-center mt-2">
-                Für Testzwecke und Demonstrationen
-              </p>
-            </div>
           </CardContent>
         </Card>
 

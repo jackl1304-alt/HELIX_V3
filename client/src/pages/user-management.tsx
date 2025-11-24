@@ -181,14 +181,12 @@ export default function UserManagement() {
     }
   });
 
-  const { data: users = initialUsers, isLoading: usersLoading } = useQuery<User[]>({
-    queryKey: ["/api/users"],
-    enabled: false // Use mock data
+  const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
+    queryKey: ["/api/users"]
   });
 
-  const { data: userActivity = recentActivity, isLoading: activityLoading } = useQuery<UserActivity[]>({
-    queryKey: ["/api/users/activity"],
-    enabled: false // Use mock data
+  const { data: userActivity = [], isLoading: activityLoading } = useQuery<UserActivity[]>({
+    queryKey: ["/api/users/activity"]
   });
 
   const createUserMutation = useMutation({

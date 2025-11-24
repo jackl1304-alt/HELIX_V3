@@ -196,12 +196,19 @@ export default function RegulatoryUpdates() {
                       {update.description.split('\n')[0]}
                     </p>
                     
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>
-                        {new Date(update.published_at).toLocaleDateString('de-DE')}
-                      </span>
-                      <div className="flex items-center gap-4">
-                        <span className="capitalize">{update.update_type}</span>
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-3 text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" />
+                          {new Date(update.published_at).toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </span>
+                        <span className="text-xs">•</span>
+                        <span className="font-medium text-foreground">{update.source_id}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs capitalize">
+                          {update.update_type}
+                        </Badge>
                         {update.source_url && (
                           <Button
                             variant="ghost"
@@ -212,7 +219,7 @@ export default function RegulatoryUpdates() {
                             }}
                           >
                             <ExternalLink className="h-3 w-3 mr-1" />
-                            Quelle
+                            Zur Quelle
                           </Button>
                         )}
                       </div>

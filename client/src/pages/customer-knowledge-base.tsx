@@ -259,7 +259,16 @@ export default function CustomerKnowledgeBase() {
                       </div>
                       <div className="flex items-center space-x-1">
                         <Calendar className="w-4 h-4" />
-                        <span>{new Date(article.published_at).toLocaleDateString('de-DE')}</span>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-3 w-3" />
+                          <span>{new Date(article.published_at).toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                          {article.source_id && (
+                            <>
+                              <span>•</span>
+                              <span className="font-medium">{article.source_id}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">

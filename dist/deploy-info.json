@@ -1,0 +1,32 @@
+{
+  "buildTime": "2025-11-24T08:36:54.946Z",
+  "buildType": "production-optimized",
+  "bundledPackages": [
+    "cors",
+    "express",
+    "drizzle-orm",
+    "drizzle-zod",
+    "zod",
+    "nanoid",
+    "memoizee",
+    "archiver",
+    "cheerio",
+    "axios",
+    "node-fetch"
+  ],
+  "externalPackages": [
+    "nodemailer",
+    "@anthropic-ai/sdk",
+    "openai",
+    "@sendgrid/mail",
+    "winston",
+    "pg",
+    "@neondatabase/serverless",
+    "passport",
+    "passport-local",
+    "express-session",
+    "connect-pg-simple",
+    "memorystore"
+  ],
+  "nodeVersion": "v24.11.0"
+}

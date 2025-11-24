@@ -12,7 +12,7 @@ yarn-error.log*
 .env.production
 
 # Build outputs
-dist/
+# dist/  # Temporarily disabled to deploy dist folder
 build/
 
 # Runtime data

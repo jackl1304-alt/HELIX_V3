@@ -1,3 +1,12 @@
+// Hilfsfunktion: Prüft, ob ein Update als "Neu" gilt (z.B. innerhalb der letzten 7 Tage)
+function isNewUpdate(dateString?: string) {
+  if (!dateString) return false;
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return false;
+  const now = new Date();
+  const diffDays = (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24);
+  return diffDays <= 7;
+}
 import React, { useState } from 'react';
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

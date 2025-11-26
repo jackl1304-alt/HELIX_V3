@@ -67,6 +67,7 @@ const CustomerArea3 = withErrorHandling(() => import("@/pages/customer-area-3"))
 const CustomerArea3Projects = withErrorHandling(() => import("@/pages/customer-area-3-projects"));
 const CustomerArea3NewProject = withErrorHandling(() => import("@/pages/customer-area-3-new-project"));
 const CustomerArea3Projektakte = withErrorHandling(() => import("@/pages/customer-area-3-projektakte"));
+const CustomerArea3FormAssistant = withErrorHandling(() => import("@/pages/customer-area-3-form-assistant"));
 const Patents = withErrorHandling(() => import("@/pages/patents"));
 const KIAssistant1 = withErrorHandling(() => import("@/pages/ki-assistant-1"));
 const KIAssistant2 = withErrorHandling(() => import("@/pages/ki-assistant-2"));
@@ -236,9 +237,11 @@ function App() {
                   <Route path="/customer-area-1/regulatory" component={RegulatoryUpdates} />
                   <Route path="/customer-area-1/rechtsprechung" component={RechtsprechungFixed} />
                   <Route path="/customer-area-2" component={CustomerArea2} />
+
                   <Route path="/customer-area-3/new-project" component={CustomerArea3NewProject} />
                   <Route path="/customer-area-3/projects" component={CustomerArea3Projects} />
                   <Route path="/customer-area-3/projektakte" component={CustomerArea3Projektakte} />
+                  <Route path="/customer-area-3/form-assistant" component={CustomerArea3FormAssistant} />
                   <Route path="/customer-area-3" component={CustomerArea3} />
 
                   <Route component={NotFound} />

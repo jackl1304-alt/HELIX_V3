@@ -64,3 +64,6 @@ restore-db.sql
 
 # Development tools
 .eslintcache
+
+# Agent state files
+.agent_state_*.bin

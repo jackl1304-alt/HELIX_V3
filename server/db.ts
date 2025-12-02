@@ -12,17 +12,11 @@ neonConfig.webSocketConstructor = ws;
 // Windows-kompatible Datenbankverbindung mit Fallback
 let pool: NeonPool | PgPool | null = null;
 let dbInstance: any = null;
-let driver: 'neon' | 'pg' | 'mock' = 'mock';
+let driver: 'neon' | 'pg' = 'pg';
 
 if (!process.env.DATABASE_URL) {
-  console.warn('[DB] DATABASE_URL not set, using mock database for development');
-  // Mock-Datenbank für Entwicklung
-  dbInstance = {
-    select: () => ({ from: () => Promise.resolve([]) }),
-    insert: () => ({ values: () => Promise.resolve([]) }),
-    update: () => ({ set: () => ({ where: () => Promise.resolve([]) }) }),
-    delete: () => ({ where: () => Promise.resolve([]) }),
-  };
+  console.error('[DB] DATABASE_URL not set - database connection required');
+  throw new Error('DATABASE_URL environment variable is required. Please set it in .env file');
 } else {
   const url = process.env.DATABASE_URL;
   const isNeon = /\.neon\.tech/.test(url || '');
@@ -42,18 +36,8 @@ if (!process.env.DATABASE_URL) {
       console.log('[DB] Using native pg driver');
     }
   } catch (error) {
-    console.warn('[DB] Failed to connect to database, using mock:', error);
-    if (process.env.NODE_ENV === 'development') {
-      dbInstance = {
-        select: () => ({ from: () => Promise.resolve([]) }),
-        insert: () => ({ values: () => Promise.resolve([]) }),
-        update: () => ({ set: () => ({ where: () => Promise.resolve([]) }) }),
-        delete: () => ({ where: () => Promise.resolve([]) }),
-      };
-      driver = 'mock';
-    } else {
-      throw new Error('DATABASE_URL must be set. Did you forget to provision a database?');
-    }
+    console.error('[DB] Failed to connect to database:', error);
+    throw new Error(`Database connection failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please check your DATABASE_URL.`);
   }
 }
 

@@ -356,9 +356,6 @@ export function Sidebar() {
               alt="HELIX"
               className="w-48 h-48 object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-300"
             />
-            <div className="text-xs font-semibold text-slate-600">
-              Powered by <span className="text-[#1a365d] font-bold">DELTA WAYS</span>
-            </div>
           </div>
         </Link>
 
@@ -405,15 +402,6 @@ export function Sidebar() {
             <span className="text-[#1a365d] font-bold text-[11px] uppercase tracking-wide">21 Active</span>
           </div>
 
-          {/* Deltaways Branding */}
-          <div className="pt-2 border-t border-slate-100">
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Powered by</span>
-              <span className="text-[10px] font-bold bg-gradient-to-r from-[#1a365d] to-slate-700 bg-clip-text text-transparent uppercase tracking-wider">
-                DELTAWAYS
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* Tenant Logout */}
@@ -430,12 +418,6 @@ export function Sidebar() {
           </button>
         </div>
 
-        {/* DELTA WAYS Credit */}
-        <div className="mt-3 pt-3 border-t border-gray-200 text-center">
-          <p className="text-xs text-gray-400 font-medium">
-            Engineered by <span className="text-[#1e40af] font-bold">DELTA WAYS</span>
-          </p>
-        </div>
       </div>
     </aside>
   );

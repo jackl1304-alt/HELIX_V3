@@ -1,53 +1,58 @@
-// Zentrale Datenbankverbindung für Windows-Kompatibilität
-import { neon } from '@neondatabase/serverless';
+// DEPRECATED: Diese Datei wird für Kompatibilität beibehalten
+// Bitte verwenden Sie stattdessen: import { pool } from './db.js'
+// Diese Datei verwendet jetzt die zentrale DB-Verbindung aus db.ts
+
+import { pool } from './db.js';
 
 let sqlInstance: any = null;
 let isConnected = false;
 
+/**
+ * @deprecated Verwenden Sie direkt: import { pool } from './db.js'
+ */
 export function getDatabaseConnection() {
   if (sqlInstance) {
     return sqlInstance;
   }
 
-  const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-
-  if (!DATABASE_URL) {
-    console.warn('[DB] No DATABASE_URL found, using mock database');
-    sqlInstance = createMockSQL();
-    return sqlInstance;
-  }
-
-  // Validiere DATABASE_URL Format
-  if (!DATABASE_URL.includes('://') || !DATABASE_URL.startsWith('postgresql://')) {
-    console.warn('[DB] Invalid DATABASE_URL format, using mock database');
-    console.warn('[DB] Expected format: postgresql://user:password@host:port/database');
+  if (!pool) {
+    console.warn('[DB] No database pool available, using mock database');
     sqlInstance = createMockSQL();
     return sqlInstance;
   }
 
   try {
-    sqlInstance = neon(DATABASE_URL);
+    // Erstelle SQL Template Helper basierend auf pool
+    sqlInstance = async (strings: TemplateStringsArray, ...values: any[]) => {
+      const text = strings.reduce((acc, part, i) => acc + part + (i < values.length ? `$${i + 1}` : ''), '');
+      const result = await pool.query(text, values);
+      return result.rows;
+    };
     isConnected = true;
-    console.log('[DB] Database connection established');
+    console.log('[DB] Database connection established via db.ts');
     return sqlInstance;
   } catch (error) {
-    console.warn('[DB] Failed to connect to database, using mock:', error);
+    console.warn('[DB] Failed to create SQL helper, using mock:', error);
     sqlInstance = createMockSQL();
     return sqlInstance;
   }
 }
 
 function createMockSQL() {
-  // Mock SQL-Objekt für Entwicklung ohne Datenbank
-  return {
-    template: () => Promise.resolve([]),
-    query: () => Promise.resolve({ rows: [], rowCount: 0 }),
-    transaction: (callback: any) => Promise.resolve(callback({})),
-  };
+  // Keine Mock-Daten mehr - Fehler werfen
+  throw new Error('Database connection not available. DATABASE_URL must be set.');
 }
 
-export const sql = getDatabaseConnection();
-export const isDatabaseConnected = () => isConnected;
+// SQL Template Helper - verwendet jetzt pool aus db.ts
+export const sql = pool 
+  ? (async (strings: TemplateStringsArray, ...values: any[]) => {
+      const text = strings.reduce((acc, part, i) => acc + part + (i < values.length ? `$${i + 1}` : ''), '');
+      const result = await pool.query(text, values);
+      return result.rows;
+    })
+  : createMockSQL();
+
+export const isDatabaseConnected = () => pool !== null;
 
 
 

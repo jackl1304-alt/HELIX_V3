@@ -3,6 +3,11 @@
 import { config } from 'dotenv';
 config();
 
+// IMPORTANT: This file creates its own database connection
+// TODO: Migrate to use db and pool from './db.js' to avoid duplicate connections
+// Currently maintaining backward compatibility - this creates a separate pool
+// which should be consolidated with server/db.ts in the future
+
 // Datenbank-Treiber (Native PG only - Neon HTTP removed for stability)
 import { Pool as PgPool } from 'pg';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
@@ -18,57 +23,18 @@ console.log('[DB] Environment:', process.env.NODE_ENV || 'development');
 // Windows-kompatible Datenbankverbindung mit Fallback
 let sql: any;
 let db: any;
-let isMockMode = false;
+// isMockMode entfernt - keine Mock-Datenbank mehr
 
 if (!DATABASE_URL) {
   console.error('[DB ERROR] No DATABASE_URL environment variable found');
-  console.warn('[DB WARNING] Application will start but database operations will fail');
-  console.warn('[DB WARNING] Please set DATABASE_URL environment variable');
-  console.warn('[DB WARNING] Example: postgresql://user:password@host:5432/database');
-  console.warn('[DB WARNING] Or use a free Neon database: https://neon.tech');
-
-  // Erstelle einen Mock-DB-Objekt für Entwicklung
-  if (process.env.NODE_ENV === 'development') {
-    console.warn('[DB WARNING] Using mock database for development (limited functionality)');
-    isMockMode = true;
-    // Mock-Datenbank-Objekt erstellen
-    db = {
-      select: () => ({ from: () => Promise.resolve([]) }),
-      insert: () => ({ values: () => Promise.resolve([]) }),
-      update: () => ({ set: () => ({ where: () => Promise.resolve([]) }) }),
-      delete: () => ({ where: () => Promise.resolve([]) }),
-    };
-    // Mock SQL function
-    sql = (strings: TemplateStringsArray, ...values: any[]) => {
-      console.log('[MOCK SQL] Query:', strings.join('?'), 'Values:', values);
-      return Promise.resolve([]);
-    };
-  } else {
-    throw new Error('DATABASE_URL environment variable is required in production');
-  }
+  throw new Error('DATABASE_URL environment variable is required. Please set it in .env file');
 } else {
   console.log('[DB] Using DATABASE_URL for Production/Development');
   // Validiere DATABASE_URL Format bevor Verbindung
   if (!DATABASE_URL.includes('://') || !DATABASE_URL.startsWith('postgresql://') || !DATABASE_URL.includes('@')) {
     console.warn('[DB WARNING] Invalid DATABASE_URL format');
     console.warn('[DB WARNING] Expected: postgresql://user:password@host:port/database');
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[DB WARNING] Using mock database in development mode');
-      isMockMode = true;
-      db = {
-        select: () => ({ from: () => Promise.resolve([]) }),
-        insert: () => ({ values: () => Promise.resolve([]) }),
-        update: () => ({ set: () => ({ where: () => Promise.resolve([]) }) }),
-        delete: () => ({ where: () => Promise.resolve([]) }),
-      };
-      // Mock SQL function
-      sql = (strings: TemplateStringsArray, ...values: any[]) => {
-        console.log('[MOCK SQL] Query:', strings.join('?'), 'Values:', values);
-        return Promise.resolve([]);
-      };
-    } else {
-      throw new Error('Invalid DATABASE_URL format in production');
-    }
+    throw new Error('Invalid DATABASE_URL format. Expected: postgresql://user:password@host:port/database');
   } else {
     // ALWAYS use native PG Pool for stability (no Neon HTTP)
     console.log('[DB] Initializing NATIVE PostgreSQL connection pool...');
@@ -103,7 +69,6 @@ if (!DATABASE_URL) {
     };
 
     console.log('[DB] storage.ts: Native PG driver with connection pooling ACTIVE');
-    isMockMode = false;
   }
 }
 
@@ -114,6 +79,7 @@ export interface IStorage {
   getAllDataSources(): Promise<any[]>;
   getRecentRegulatoryUpdates(limit?: number): Promise<any[]>;
   getPendingApprovals(): Promise<any[]>;
+  getOngoingApprovals(): Promise<any[]>;
   updateDataSource(id: string, updates: any): Promise<any>;
   getActiveDataSources(): Promise<any[]>;
   getHistoricalDataSources(): Promise<any[]>;
@@ -199,7 +165,7 @@ class MorningStorage implements IStorage {
 
       const stats = {
         totalUpdates: regCount?.count || 0,
-        uniqueUpdates: regCount?.count || 0, // Placeholder until duplicate logic implemented
+        uniqueUpdates: regCount?.count || 0,
         totalLegalCases: legalCount?.count || 0,
         uniqueLegalCases: legalCount?.count || 0,
         recentUpdates: recentUpdates?.count || 0,
@@ -220,7 +186,8 @@ class MorningStorage implements IStorage {
       console.log('[DB] Dashboard-Statistiken erstellt:', stats);
       return stats;
     } catch (error) {
-      console.error('⚠️ Dashboard Stats Fallback aktiv:', error);
+      console.error('❌ Database error fetching dashboard stats:', error);
+      // Keine Mock-Daten - leeres Stats-Objekt zurückgeben
       return {
         totalUpdates: 0,
         uniqueUpdates: 0,
@@ -417,6 +384,238 @@ class MorningStorage implements IStorage {
     }
   }
 
+  // Laufende Zulassungen - Aus externen Quellen (regulatory_updates)
+  async getOngoingApprovals() {
+    try {
+      console.log('[DB] getOngoingApprovals called - fetching ongoing approvals from regulatory_updates');
+      
+      // Hole laufende Zulassungen aus regulatory_updates
+      // Filter: type = 'approval' UND (approvalStatus = 'pending'/'in_review' ODER fdaDecisionDate IS NULL ODER publishedDate sehr recent)
+      const updates = await sql`
+        SELECT 
+          id, title, description, type, category, device_type, device_class,
+          jurisdiction, published_date, effective_date, submission_date,
+          review_start_date, expected_decision_date, approval_status,
+          fda_k_number, fda_applicant, fda_device_class, fda_status,
+          fda_decision_date, source_url, source_id, priority, risk_level,
+          metadata, created_at, updated_at
+        FROM regulatory_updates
+        WHERE type = 'approval'
+          AND (
+            approval_status IN ('pending', 'in_review')
+            OR (approval_status IS NULL AND fda_decision_date IS NULL)
+            OR (fda_decision_date IS NULL AND published_date > NOW() - INTERVAL '90 days')
+          )
+        ORDER BY 
+          CASE 
+            WHEN approval_status = 'pending' THEN 1
+            WHEN approval_status = 'in_review' THEN 2
+            ELSE 3
+          END,
+          priority DESC NULLS LAST,
+          published_date DESC NULLS LAST,
+          created_at DESC
+        LIMIT 500
+      `;
+      console.log(`[DB] Fetched ${updates.length} ongoing approvals from regulatory_updates`);
+      
+      // Transformiere regulatory_updates zu OngoingApproval Format
+      return updates.map((update: any) => {
+        // Bestimme Region aus jurisdiction
+        const region = update.jurisdiction || 'Unknown';
+        
+        // Bestimme Regulatory Body basierend auf Region
+        let regulatoryBody = 'Unknown';
+        if (region === 'US' || update.fda_k_number) {
+          regulatoryBody = 'FDA - Center for Devices and Radiological Health';
+        } else if (region === 'EU' || region === 'DE' || region === 'FR' || region === 'IT') {
+          regulatoryBody = 'MDR - Benannte Stelle';
+        } else if (region === 'CA') {
+          regulatoryBody = 'Health Canada';
+        } else if (region === 'UK' || region === 'GB') {
+          regulatoryBody = 'MHRA - Medicines and Healthcare products Regulatory Agency';
+        } else if (region === 'CH') {
+          regulatoryBody = 'Swissmedic';
+        } else if (region === 'JP') {
+          regulatoryBody = 'PMDA - Pharmaceuticals and Medical Devices Agency';
+        } else if (region === 'AU') {
+          regulatoryBody = 'TGA - Therapeutic Goods Administration';
+        }
+        
+        // Bestimme Status-Mapping aus approval_status oder fda_status
+        let status: string = 'submitted';
+        const approvalStatus = update.approval_status || update.fda_status;
+        if (approvalStatus === 'pending' || approvalStatus === 'submitted') {
+          status = 'submitted';
+        } else if (approvalStatus === 'in_review' || approvalStatus === 'under_review') {
+          status = 'under-review';
+        } else if (approvalStatus === 'pending_response' || approvalStatus === 'additional_info_requested') {
+          status = 'pending-response';
+        } else if (approvalStatus === 'nearly_approved' || approvalStatus === 'final_review') {
+          status = 'nearly-approved';
+        } else if (approvalStatus === 'approved' || update.fda_decision_date) {
+          status = 'approved';
+        } else if (approvalStatus === 'rejected' || approvalStatus === 'denied') {
+          status = 'rejected';
+        }
+        
+        // Berechne Progress basierend auf Status
+        let progressPercentage = 0;
+        if (status === 'submitted') progressPercentage = 20;
+        else if (status === 'under-review') progressPercentage = 50;
+        else if (status === 'pending-response') progressPercentage = 60;
+        else if (status === 'nearly-approved') progressPercentage = 90;
+        else if (status === 'approved') progressPercentage = 100;
+        else if (status === 'rejected') progressPercentage = 0;
+        
+        // Extrahiere Produktname aus title
+        let productName = update.title || 'Unknown Product';
+        // Entferne Präfixe wie "FDA 510(k):", "FDA PMA:", etc.
+        productName = productName.replace(/^(FDA\s+(510\(k\)|PMA|Device):\s*|EMA\s+Approval:\s*)/i, '').trim();
+        
+        // Extrahiere Company aus fda_applicant oder metadata
+        const company = update.fda_applicant || update.metadata?.company || update.metadata?.applicant || 'Unknown Company';
+        
+        // Bestimme Device Class
+        const deviceClass = update.device_class || update.fda_device_class || 'Unknown';
+        
+        // Submission Date
+        const submissionDate = update.submission_date 
+          ? new Date(update.submission_date).toISOString().split('T')[0]
+          : update.published_date
+          ? new Date(update.published_date).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0];
+        
+        // Expected Approval Date
+        const expectedApproval = update.expected_decision_date
+          ? new Date(update.expected_decision_date).toISOString().split('T')[0]
+          : null;
+        
+        // Current Phase
+        const currentPhase = this.getCurrentPhaseFromApprovalStatus(approvalStatus || status);
+        
+        // Key Milestones
+        const keyMilestones = this.getKeyMilestonesFromStatus(approvalStatus || status);
+        
+        // Priority basierend auf risk_level oder priority
+        let priority: 'low' | 'medium' | 'high' | 'critical' = 'medium';
+        if (update.risk_level === 'high' || update.priority >= 4) priority = 'high';
+        else if (update.risk_level === 'critical' || update.priority >= 5) priority = 'critical';
+        else if (update.risk_level === 'low' || update.priority <= 2) priority = 'low';
+        
+        return {
+          id: update.id,
+          productName: productName,
+          company: company,
+          region: region,
+          regulatoryBody: regulatoryBody,
+          submissionDate: submissionDate,
+          expectedApproval: expectedApproval,
+          currentPhase: currentPhase,
+          deviceClass: deviceClass,
+          status: status as any,
+          progressPercentage: progressPercentage,
+          estimatedCosts: 'N/A', // Wird später aus metadata extrahiert falls verfügbar
+          keyMilestones: keyMilestones,
+          challenges: update.metadata?.challenges || [],
+          nextSteps: update.metadata?.nextSteps || [],
+          contactPerson: update.metadata?.contactPerson || 'N/A',
+          priority: priority
+        };
+      });
+    } catch (error) {
+      console.error("❌ getOngoingApprovals error:", error);
+      return [];
+    }
+  }
+
+  private getCurrentPhase(status: string): string {
+    const phaseMap: Record<string, string> = {
+      'planning': 'Planungsphase',
+      'in_development': 'Entwicklung',
+      'regulatory_review': 'Regulatorische Prüfung',
+      'approval_pending': 'Genehmigung ausstehend',
+      'testing': 'Testphase',
+      'approved': 'Genehmigt',
+      'on_hold': 'Pausiert',
+      'cancelled': 'Abgebrochen'
+    };
+    return phaseMap[status] || status;
+  }
+
+  private getCurrentPhaseFromApprovalStatus(status: string): string {
+    const phaseMap: Record<string, string> = {
+      'submitted': 'Eingereicht',
+      'pending': 'Eingereicht',
+      'in_review': 'In Prüfung',
+      'under_review': 'In Prüfung',
+      'under-review': 'In Prüfung',
+      'pending_response': 'Antwort ausstehend',
+      'additional_info_requested': 'Zusätzliche Informationen angefordert',
+      'nearly_approved': 'Fast genehmigt',
+      'final_review': 'Finale Prüfung',
+      'approved': 'Genehmigt',
+      'rejected': 'Abgelehnt',
+      'denied': 'Abgelehnt',
+      'withdrawn': 'Zurückgezogen'
+    };
+    return phaseMap[status?.toLowerCase()] || 'Unbekannt';
+  }
+
+  private getKeyMilestonesFromStatus(status: string): string[] {
+    const statusLower = status?.toLowerCase() || '';
+    const milestones: string[] = [];
+    
+    if (statusLower === 'submitted' || statusLower === 'pending') {
+      milestones.push('✅ Antrag eingereicht');
+      milestones.push('⏳ Warte auf erste Prüfung');
+    } else if (statusLower === 'in_review' || statusLower === 'under_review' || statusLower === 'under-review') {
+      milestones.push('✅ Antrag eingereicht');
+      milestones.push('✅ Erste Prüfung abgeschlossen');
+      milestones.push('🔄 Detaillierte Prüfung läuft');
+      milestones.push('⏳ Warte auf Entscheidung');
+    } else if (statusLower === 'pending_response' || statusLower === 'additional_info_requested') {
+      milestones.push('✅ Antrag eingereicht');
+      milestones.push('✅ Erste Prüfung abgeschlossen');
+      milestones.push('🔄 Zusätzliche Informationen angefordert');
+      milestones.push('⏳ Warte auf Antwort');
+    } else if (statusLower === 'nearly_approved' || statusLower === 'final_review') {
+      milestones.push('✅ Antrag eingereicht');
+      milestones.push('✅ Erste Prüfung abgeschlossen');
+      milestones.push('✅ Detaillierte Prüfung abgeschlossen');
+      milestones.push('🔄 Finale Prüfung läuft');
+    } else if (statusLower === 'approved') {
+      milestones.push('✅ Antrag eingereicht');
+      milestones.push('✅ Erste Prüfung abgeschlossen');
+      milestones.push('✅ Detaillierte Prüfung abgeschlossen');
+      milestones.push('✅ Genehmigung erteilt');
+    } else {
+      milestones.push('⏳ Status wird geprüft');
+    }
+    
+    return milestones;
+  }
+
+  private getKeyMilestones(status: string): string[] {
+    const milestones: Record<string, string[]> = {
+      'planning': ['✅ Projekt initialisiert', '⏳ Planung läuft'],
+      'in_development': ['✅ Planung abgeschlossen', '🔄 Entwicklung läuft', '⏳ Tests ausstehend'],
+      'regulatory_review': ['✅ Entwicklung abgeschlossen', '✅ Tests abgeschlossen', '🔄 Regulatorische Prüfung läuft', '⏳ Genehmigung ausstehend'],
+      'approval_pending': ['✅ Entwicklung abgeschlossen', '✅ Tests abgeschlossen', '✅ Regulatorische Prüfung abgeschlossen', '⏳ Genehmigung ausstehend'],
+      'approved': ['✅ Entwicklung abgeschlossen', '✅ Tests abgeschlossen', '✅ Regulatorische Prüfung abgeschlossen', '✅ Genehmigt']
+    };
+    return milestones[status] || [];
+  }
+
+  private mapRiskToPriority(riskLevel: string | null): 'low' | 'medium' | 'high' | 'critical' {
+    if (!riskLevel) return 'medium';
+    const risk = riskLevel.toLowerCase();
+    if (risk === 'critical') return 'critical';
+    if (risk === 'high') return 'high';
+    if (risk === 'low') return 'low';
+    return 'medium';
+  }
+
   async updateDataSource(id: string, updates: any) {
     try {
       // Update only existing columns - no updated_at column in this table
@@ -549,46 +748,9 @@ class MorningStorage implements IStorage {
       console.log(`[DB] Alle regulatory updates für Frontend: ${result.length} Einträge (mit Quellen)`);
       return result;
     } catch (error) {
-      console.error("⚠️ DB Endpoint deaktiviert - verwende Fallback Updates:", error);
-      // Fallback Updates basierend auf echten DB-Strukturen
-      return [
-        {
-          id: 'dd701b8c-73a2-4bb8-b775-3d72d8ee9721',
-          title: 'BfArM Leitfaden: Umfassende neue Anforderungen für Medizinprodukte - Detaillierte Regulierungsupdate 7.8.2025',
-          description: 'Bundesinstitut für Arzneimittel und Medizinprodukte veröffentlicht neue umfassende Anforderungen für die Zulassung und Überwachung von Medizinprodukten in Deutschland.',
-          source_id: 'bfarm_germany',
-          source_url: 'https://www.bfarm.de/SharedDocs/Risikoinformationen/Medizinprodukte/DE/aktuelles.html',
-          region: 'Germany',
-          update_type: 'guidance',
-          priority: 'high',
-          published_at: '2025-08-07T10:00:00Z',
-          created_at: '2025-08-07T10:00:00Z'
-        },
-        {
-          id: '30aea682-8eb2-4aac-b09d-0ddb3f9d3cd8',
-          title: 'FDA 510(k): Profoject™ Disposable Syringe, Profoject™ Disposable Syringe with Needle (K252033)',
-          description: 'FDA clears Profoject disposable syringe system for medical injection procedures.',
-          source_id: 'fda_510k',
-          source_url: 'https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpmn/pmn.cfm?ID=K252033',
-          region: 'US',
-          update_type: 'clearance',
-          priority: 'medium',
-          published_at: '2025-08-06T14:30:00Z',
-          created_at: '2025-08-06T14:30:00Z'
-        },
-        {
-          id: '86a61770-d775-42c2-b23d-dfb0e5ed1083',
-          title: 'FDA 510(k): Ice Cooling IPL Hair Removal Device (UI06S PR, UI06S PN, UI06S WH, UI06S PRU, UI06S PNU, UI06S WHU) (K251984)',
-          description: 'FDA clearance for advanced IPL hair removal device with ice cooling technology.',
-          source_id: 'fda_510k',
-          source_url: 'https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpmn/pmn.cfm?ID=K251984',
-          region: 'US',
-          update_type: 'clearance',
-          priority: 'medium',
-          published_at: '2025-08-05T09:15:00Z',
-          created_at: '2025-08-05T09:15:00Z'
-        }
-      ];
+      console.error("❌ Database error fetching regulatory updates:", error);
+      // Keine Mock-Daten - leeres Array zurückgeben
+      return [];
     }
   }
 
@@ -646,33 +808,65 @@ class MorningStorage implements IStorage {
 
   async createRegulatoryUpdate(data: any) {
     try {
-      // Korrigierte SQL mit den richtigen Spaltennamen aus schema.ts
+      // Erweiterte SQL mit allen neuen Feldern für laufende Zulassungen
       const result = await sql`
         INSERT INTO regulatory_updates (
           title,
           description,
           source_id,
+          source_url,
           document_url,
+          document_id,
           jurisdiction,
           type,
           category,
           language,
           tags,
           priority,
-          published_date
+          risk_level,
+          published_date,
+          effective_date,
+          submission_date,
+          review_start_date,
+          expected_decision_date,
+          approval_status,
+          fda_k_number,
+          fda_applicant,
+          fda_device_class,
+          fda_status,
+          action_required,
+          action_type,
+          authority_verified,
+          metadata
         )
         VALUES (
           ${data.title},
           ${data.description || 'No description provided'},
           ${data.sourceId || null},
           ${data.sourceUrl || data.documentUrl || ''},
+          ${data.documentUrl || null},
+          ${data.documentId || null},
           ${data.jurisdiction || data.region || 'International'},
           ${(data.type || 'regulation')}::update_type,
           ${data.category || 'general'},
           ${data.language || 'en'},
           ${data.tags || []},
           ${typeof data.priority === 'number' ? data.priority : 1},
-          ${data.publishedDate || data.publishedAt || new Date()}
+          ${data.riskLevel || null},
+          ${data.publishedDate || data.publishedAt || new Date()},
+          ${data.effectiveDate || null},
+          ${data.submissionDate || null},
+          ${data.reviewStartDate || null},
+          ${data.expectedDecisionDate || null},
+          ${data.approvalStatus || null},
+          ${data.fdaKNumber || null},
+          ${data.fdaApplicant || null},
+          ${data.fdaDeviceClass || null},
+          ${data.fdaStatus || null},
+          ${data.actionRequired || false},
+          ${data.actionType || null},
+          ${data.authorityVerified || false},
+          ${data.metadata ? JSON.stringify(data.metadata) : null}
         )
         RETURNING *
       `;
@@ -795,8 +989,7 @@ class MorningStorage implements IStorage {
       return result[0];
     } catch (error) {
       console.error("[DB] Create legal case error:", error);
-      // Don't throw - just log and return mock
-      return { id: 'mock-id', ...data };
+      throw error; // Fehler weiterwerfen statt Mock-Daten
     }
   }
 
@@ -876,7 +1069,7 @@ class MorningStorage implements IStorage {
       return inserted[0];
     } catch (error) {
       console.error('[DB] createPatent error:', error);
-      return { id: 'mock-patent', ...data };
+      throw error; // Fehler weiterwerfen statt Mock-Daten
     }
   }
 
@@ -1339,17 +1532,55 @@ class MorningStorage implements IStorage {
   async createProject(data: any) {
     try {
       console.log('[DB] createProject called:', data.name);
+      
+      // Parse metadata if it's a string
+      let metadata = data.metadata;
+      if (typeof metadata === 'string') {
+        try {
+          metadata = JSON.parse(metadata);
+        } catch (e) {
+          metadata = {};
+        }
+      }
+      
+      // Extract target_markets from metadata or data
+      let targetMarkets = data.targetMarkets || metadata?.targetMarkets || [];
+      
+      // Ensure targetMarkets is an array
+      if (!Array.isArray(targetMarkets)) {
+        if (typeof targetMarkets === 'string') {
+          try {
+            targetMarkets = JSON.parse(targetMarkets);
+          } catch (e) {
+            targetMarkets = [targetMarkets];
+          }
+        } else {
+          targetMarkets = [];
+        }
+      }
+      
+      // Extract estimated_approval_date from metadata or data
+      const estimatedApprovalDate = data.estimatedApprovalDate || metadata?.estimatedApprovalDate || null;
+      
+      // Convert targetMarkets array to PostgreSQL array format
+      const targetMarketsPg = targetMarkets.length > 0 
+        ? sql`${targetMarkets}::text[]`
+        : sql`ARRAY[]::text[]`;
+      
       const result = await sql`
         INSERT INTO projects (
           name, description, device_type, device_class, intended_use, therapeutic_area,
-          status, risk_level, priority, start_date, target_submission_date,
+          status, risk_level, priority, start_date, target_submission_date, estimated_approval_date,
+          target_markets, metadata,
           estimated_cost_total, estimated_cost_development, estimated_cost_regulatory, estimated_cost_testing,
           similar_devices_found, regulatory_requirements, compliance_checklist, risk_assessment
         ) VALUES (
           ${data.name}, ${data.description}, ${data.deviceType}, ${data.deviceClass},
           ${data.intendedUse}, ${data.therapeuticArea}, ${data.status || 'planning'},
           ${data.riskLevel || 'medium'}, ${data.priority || 1}, ${data.startDate},
-          ${data.targetSubmissionDate}, ${data.estimatedCostTotal || 0},
+          ${data.targetSubmissionDate}, ${estimatedApprovalDate},
+          ${targetMarketsPg}, ${JSON.stringify(metadata || {})},
+          ${data.estimatedCostTotal || 0},
           ${data.estimatedCostDevelopment || 0}, ${data.estimatedCostRegulatory || 0},
           ${data.estimatedCostTesting || 0}, ${JSON.stringify(data.similarDevicesFound || [])},
           ${JSON.stringify(data.regulatoryRequirements || [])},

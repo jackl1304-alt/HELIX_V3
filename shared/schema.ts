@@ -152,6 +152,12 @@ export const regulatoryUpdates = pgTable("regulatory_updates", {
   fdaRegulationNumber: varchar("fda_regulation_number"),
   fdaDecisionDate: timestamp("fda_decision_date"),
   fdaStatus: varchar("fda_status"),
+  
+  // Approval Status for ongoing approvals
+  approvalStatus: varchar("approval_status"), // pending, in_review, approved, rejected, withdrawn
+  submissionDate: timestamp("submission_date"), // When the approval was submitted
+  reviewStartDate: timestamp("review_start_date"), // When review started
+  expectedDecisionDate: timestamp("expected_decision_date"), // Expected decision date
 
   // Financial Analysis
   riskScore: integer("risk_score"), // 0-100

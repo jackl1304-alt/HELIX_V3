@@ -50,164 +50,19 @@ export default function LaufendeZulassungen() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Mock Data für laufende Zulassungen - In der Produktion würde dies von der API kommen
+  // Echte Daten von der API - keine Mock-Daten
   const { data: approvals = [], isLoading } = useQuery({
     queryKey: ['ongoing-approvals'],
     queryFn: async (): Promise<OngoingApproval[]> => {
-      return [
-        {
-          id: 'app-001',
-          productName: 'CardioSense AI Monitoring System',
-          company: 'MedTech Innovations GmbH',
-          region: 'EU',
-          regulatoryBody: 'MDR - Benannte Stelle TÜV SÜD',
-          submissionDate: '2025-06-15',
-          expectedApproval: '2025-12-15',
-          currentPhase: 'Technische Dokumentation Review',
-          deviceClass: 'Klasse IIa',
-          status: 'under-review',
-          progressPercentage: 65,
-          estimatedCosts: '€180.000',
-          keyMilestones: [
-            '✅ Präklinische Tests abgeschlossen',
-            '✅ Klinische Bewertung eingereicht', 
-            '🔄 Technische Dokumentation unter Review',
-            '⏳ Benannte Stelle Zertifizierung ausstehend'
-          ],
-          challenges: [
-            'Zusätzliche klinische Daten für KI-Algorithmus angefordert',
-            'Post-Market Surveillance Plan muss erweitert werden'
-          ],
-          nextSteps: [
-            'Antwort auf Fragen der Benannten Stelle bis 15. August',
-            'Erweiterte klinische Validierung einreichen'
-          ],
-          contactPerson: 'Dr. Sarah Weber - Regulatory Affairs',
-          priority: 'high'
-        },
-        {
-          id: 'app-002',
-          productName: 'NeuroStim Implant V3',
-          company: 'Brain Tech Solutions',
-          region: 'USA',
-          regulatoryBody: 'FDA - Center for Devices and Radiological Health',
-          submissionDate: '2025-03-10',
-          expectedApproval: '2026-01-30',
-          currentPhase: 'PMA Review Phase II',
-          deviceClass: 'Class III',
-          status: 'pending-response',
-          progressPercentage: 45,
-          estimatedCosts: '$875.000',
-          keyMilestones: [
-            '✅ IDE Studie abgeschlossen',
-            '✅ PMA Antrag eingereicht',
-            '🔄 FDA Review Phase II',
-            '⏳ Advisory Panel Meeting geplant'
-          ],
-          challenges: [
-            'FDA fordert erweiterte Langzeitsicherheitsdaten',
-            'Zusätzliche Biokompatibilitätsstudien erforderlich'
-          ],
-          nextSteps: [
-            'Antwort auf FDA Major Deficiency Letter bis 20. August',
-            'Advisory Panel Meeting vorbereiten'
-          ],
-          contactPerson: 'Mark Johnson - VP Regulatory',
-          priority: 'critical'
-        },
-        {
-          id: 'app-003',
-          productName: 'FlexiScope Endoskop',
-          company: 'Precision Medical Devices',
-          region: 'Japan',
-          regulatoryBody: 'PMDA - Pharmaceuticals and Medical Devices Agency',
-          submissionDate: '2025-07-01',
-          expectedApproval: '2026-03-15',
-          currentPhase: 'Administrative Review',
-          deviceClass: 'Class II',
-          status: 'submitted',
-          progressPercentage: 20,
-          estimatedCosts: '¥8.500.000',
-          keyMilestones: [
-            '✅ Japanischer Agent bestellt',
-            '✅ Übersetzungen abgeschlossen',
-            '🔄 Administrative Prüfung läuft',
-            '⏳ Technische Review ausstehend'
-          ],
-          challenges: [
-            'Anpassung an japanische JIS Standards erforderlich',
-            'Lokale klinische Daten müssen ergänzt werden'
-          ],
-          nextSteps: [
-            'Response zu Administrative Review einreichen',
-            'Lokale Klinik-Kooperationen etablieren'
-          ],
-          contactPerson: 'Hiroshi Tanaka - Japan Representative',
-          priority: 'medium'
-        },
-        {
-          id: 'app-004',
-          productName: 'DiagnoAI Pathology Assistant',
-          company: 'AI Diagnostics Ltd.',
-          region: 'China',
-          regulatoryBody: 'NMPA - National Medical Products Administration',
-          submissionDate: '2025-05-20',
-          expectedApproval: '2025-11-30',
-          currentPhase: 'Clinical Trial Review',
-          deviceClass: 'Class III',
-          status: 'nearly-approved',
-          progressPercentage: 85,
-          estimatedCosts: '¥1.200.000',
-          keyMilestones: [
-            '✅ Clinical Trial genehmigt',
-            '✅ Clinical Data eingereicht',
-            '✅ Technical Review bestanden',
-            '🔄 Final Administrative Review'
-          ],
-          challenges: [
-            'KI-Algorithmus Dokumentation muss lokalisiert werden',
-            'Chinesischer Partner für Distribution erforderlich'
-          ],
-          nextSteps: [
-            'Administrative Unterlagen finalisieren',
-            'Distribution Agreement abschließen'
-          ],
-          contactPerson: 'Li Wei - China Operations',
-          priority: 'high'
-        },
-        {
-          id: 'app-005',
-          productName: 'SecureConnect IoT Gateway',
-          company: 'MedNet Security Inc.',
-          region: 'USA',
-          regulatoryBody: 'FDA - Cybersecurity Section 524B',
-          submissionDate: '2025-07-10',
-          expectedApproval: '2026-02-15',
-          currentPhase: 'Cybersecurity Documentation Review',
-          deviceClass: 'Class II',
-          status: 'under-review',
-          progressPercentage: 40,
-          estimatedCosts: '$320.000',
-          keyMilestones: [
-            '✅ Pre-Submission Meeting abgehalten',
-            '✅ SBOM (Software Bill of Materials) eingereicht',
-            '🔄 Threat Modeling Review läuft',
-            '⏳ Vulnerability Disclosure Program ausstehend'
-          ],
-          challenges: [
-            'FDA Section 524B Cybersicherheitsanforderungen erfüllen',
-            'SBOM Datenqualität und -vollständigkeit sicherstellen',
-            'Legacy System Integration dokumentieren'
-          ],
-          nextSteps: [
-            'Vulnerability Management Plan überarbeiten',
-            'Cybersecurity Risk Assessment vervollständigen',
-            'Post-Market Update Prozess definieren'
-          ],
-          contactPerson: 'Dr. Michael Rodriguez - Cybersecurity Lead',
-          priority: 'critical'
+      const response = await fetch('/api/ongoing-approvals');
+      if (!response.ok) {
+        if (response.status === 404) {
+          // Keine Daten vorhanden - leeres Array zurückgeben
+          return [];
         }
-      ];
+        throw new Error(`Failed to fetch ongoing approvals: ${response.statusText}`);
+      }
+      return response.json();
     }
   });
 

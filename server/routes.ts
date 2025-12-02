@@ -21,18 +21,7 @@ import {
   insertNormativeActionSchema
 } from '../shared/schema.js';
 
-// Mock optimizedSyncService for demonstration
-const optimizedSyncService = {
-  syncDataSourceWithMetrics: async (id: string, options: any) => {
-    console.log(`[SyncService] Syncing ${id} with options:`, options);
-    await new Promise(resolve => setTimeout(resolve, Math.random() * 1000)); // Simulate work
-    if (Math.random() > 0.2) { // Simulate occasional failure
-      return { success: true, sourceId: id, metrics: { records: 100, duration: 500 } };
-    } else {
-      throw new Error("Simulated sync failure");
-    }
-  }
-};
+// optimizedSyncService entfernt - keine Mock-Daten mehr
 
 // Simple sync function for all active sources
 async function syncAllActiveSources() {
@@ -743,57 +732,8 @@ export function registerRoutes(app: Express) {
     try {
       const { search, jurisdiction = 'all', startDate, endDate } = req.query;
 
-      // Mock legal cases data with authentic German content
-      const legalCases = [
-        {
-          id: '1',
-          title: 'BGH: Medizinproduktehaftung bei KI-gestützten Diagnosesystemen',
-          court: 'BGH (VI ZR 123/23)',
-          date: '2024-03-15',
-          type: 'Zivilrecht',
-          jurisdiction: 'Deutschland',
-          summary: 'Haftungsverteilung zwischen Hersteller und Anwender bei fehlerhaften KI-Diagnosen in der Radiologie.',
-          relevance: 'high',
-          medtechRelevance: 95,
-          content: 'Der BGH entschied über die Haftungsverteilung bei KI-gestützten medizinischen Diagnosesystemen. Entscheidend ist die ordnungsgemäße Validierung der Algorithmen und die angemessene Schulung des medizinischen Personals.',
-          tags: ['KI-Medizin', 'Haftung', 'Diagnostik', 'BGH'],
-          source: 'juris',
-          region: 'EU'
-        },
-        {
-          id: '2',
-          title: 'EuGH: MDR-Konformitätsbewertung für Software als Medizinprodukt',
-          court: 'EuGH (C-329/22)',
-          date: '2024-01-20',
-          type: 'EU-Recht',
-          jurisdiction: 'EU',
-          summary: 'Auslegung der MDR-Anforderungen für standalone Software-Medizinprodukte der Klasse IIa.',
-          relevance: 'critical',
-          medtechRelevance: 98,
-          content: 'Der EuGH präzisiert die Anwendung der MDR auf Software-Medizinprodukte und stellt klar, dass auch standalone Software den vollständigen Konformitätsbewertungsverfahren unterliegt.',
-          tags: ['MDR', 'Software', 'Konformität', 'EuGH'],
-          source: 'eur-lex',
-          region: 'EU'
-        },
-        {
-          id: '3',
-          title: 'VG Köln: Datenschutz bei vernetzten Medizingeräten',
-          court: 'VG Köln (7 K 2156/23)',
-          date: '2023-11-08',
-          type: 'Verwaltungsrecht',
-          jurisdiction: 'Deutschland',
-          summary: 'DSGVO-Konformität von IoT-Medizingeräten im Krankenhausumfeld.',
-          relevance: 'medium',
-          medtechRelevance: 87,
-          content: 'Das VG Köln entschied über die datenschutzrechtlichen Anforderungen an vernetzte Medizingeräte und betont die Notwendigkeit einer umfassenden Datenschutz-Folgenabschätzung.',
-          tags: ['DSGVO', 'IoT', 'Vernetzung', 'VG'],
-          source: 'justiz.nrw',
-          region: 'EU'
-        }
-      ];
-
-      // Filter based on search parameters
-      let filteredCases = legalCases;
+      // Echte Daten aus der Datenbank - keine Mock-Daten
+      let legalCases = await dbStorage.getAllLegalCases();
 
       if (search && typeof search === 'string' && search.length > 0) {
         const searchLower = search.toLowerCase();
@@ -828,40 +768,9 @@ export function registerRoutes(app: Express) {
     try {
       const { search, jurisdiction = 'all', startDate, endDate } = req.query;
 
-      // Professional legal cases with authentic German content
-      const legalCases = [
-        {
-          id: '1',
-          title: 'BGH: Medizinproduktehaftung bei KI-gestützten Diagnosesystemen',
-          court: 'BGH (VI ZR 123/23)',
-          date: '2024-03-15',
-          type: 'Zivilrecht',
-          jurisdiction: 'Deutschland',
-          summary: 'Haftungsverteilung zwischen Hersteller und Anwender bei fehlerhaften KI-Diagnosen in der Radiologie.',
-          relevance: 'high',
-          medtechRelevance: 95,
-          content: 'Der BGH entschied über die Haftungsverteilung bei KI-gestützten medizinischen Diagnosesystemen. Entscheidend ist die ordnungsgemäße Validierung der Algorithmen und die angemessene Schulung des medizinischen Personals.',
-          tags: ['KI-Medizin', 'Haftung', 'Diagnostik', 'BGH'],
-          source: 'juris',
-          region: 'EU'
-        },
-        {
-          id: '2',
-          title: 'EuGH: MDR-Konformitätsbewertung für Software als Medizinprodukt',
-          court: 'EuGH (C-329/22)',
-          date: '2024-01-20',
-          type: 'EU-Recht',
-          jurisdiction: 'EU',
-          summary: 'Auslegung der MDR-Anforderungen für standalone Software-Medizinprodukte der Klasse IIa.',
-          relevance: 'critical',
-          medtechRelevance: 98,
-          content: 'Der EuGH präzisiert die Anwendung der MDR auf Software-Medizinprodukte und stellt klar, dass auch standalone Software den vollständigen Konformitätsbewertungsverfahren unterliegt.',
-          tags: ['MDR', 'Software', 'Konformität', 'EuGH'],
-          source: 'eur-lex',
-          region: 'EU'
-        }
-      ];
-
+      // Echte Daten aus der Datenbank - keine Mock-Daten
+      let legalCases = await dbStorage.getAllLegalCases();
+      
       // Filter logic
       let filteredCases = legalCases;
       if (search && typeof search === 'string' && search.length > 0) {
@@ -893,86 +802,18 @@ export function registerRoutes(app: Express) {
       // Set proper headers for JSON response
       res.setHeader('Content-Type', 'application/json');
 
-      // PROFESSIONAL MOCK DATA - SOFORT verfügbar
-      const professionalLegalCases = [
-        {
-          id: 'bgh_2024_001',
-          title: 'BGH: Haftung für KI-gestützte Medizinprodukte',
-          court: 'Bundesgerichtshof (VI ZR 123/23)',
-          date: '2024-03-15',
-          type: 'Zivilrecht',
-          jurisdiction: 'Deutschland',
-          summary: 'Grundsatzentscheidung zur Produkthaftung bei KI-gestützten Diagnosesystemen. Der BGH definiert erstmals Haftungsverteilung zwischen Hersteller und medizinischen Einrichtungen.',
-          relevance: 'critical',
-          medtechRelevance: 98,
-          content: `Der Bundesgerichtshof hat in einem wegweisenden Urteil die Haftungsverteilung bei KI-gestützten medizinischen Diagnosesystemen präzisiert.
+      // Echte Daten aus der Datenbank - keine Mock-Daten
+      const legalCases = await dbStorage.getAllLegalCases();
 
-LEITSÄTZE:
-1. Bei KI-gestützten Medizinprodukten trägt der Hersteller die Produkthaftung für Algorithmusfehler
-2. Medizinische Einrichtungen haften für unsachgemäße Anwendung trotz ordnungsgemäßer KI-Unterstützung
-3. Die Validierung der KI-Algorithmen muss dem Stand der Technik entsprechen
-
-SACHVERHALT:
-Ein radiologisches KI-System übersah einen Tumor in der Mammographie. Die Patientin klagte gegen Hersteller und Klinik.
-
-ENTSCHEIDUNG:
-Der BGH entschied, dass beide Parteien anteilig haften - der Hersteller für den Algorithmusfehler (70%), die Klinik für unzureichende Qualitätskontrolle (30%).`,
-          tags: ['KI-Medizin', 'Produkthaftung', 'Diagnostik', 'BGH', 'Algorithmus-Validierung'],
-          source: 'juris',
-          region: 'DE',
-          impactLevel: 'high',
-          practicalImplications: [
-            'Verstärkte Validierungspflichten für KI-Hersteller',
-            'Neue Qualitätssicherungsstandards für Kliniken',
-            'Anpassung der Versicherungsmodelle erforderlich'
-          ]
-        },
-        {
-          id: 'eugh_2024_002',
-          title: 'EuGH: Software als Medizinprodukt unter der MDR',
-          court: 'Europäischer Gerichtshof (C-329/22)',
-          date: '2024-01-20',
-          type: 'EU-Recht',
-          jurisdiction: 'EU',
-          summary: 'Richtungsweisende Entscheidung zur Klassifizierung von Standalone-Software unter der Medical Device Regulation (MDR 2017/745).',
-          relevance: 'critical',
-          medtechRelevance: 99,
-          content: `Der Europäische Gerichtshof hat die Anwendung der MDR auf Software-Medizinprodukte präzisiert und damit europaweit für Rechtssicherheit gesorgt.
-
-KERNAUSSAGEN:
-1. Standalone-Software fällt vollumfänglich unter die MDR-Bestimmungen
-2. Klassifizierung richtet sich nach der Zweckbestimmung, nicht nach der technischen Implementierung
-3. Cloud-basierte Medizinsoftware unterliegt den gleichen Anforderungen wie Hardware-Medizinprodukte
-
-RECHTLICHE EINORDNUNG:
-- Software der Klasse I: Einfache Dokumentations- und Archivierungssoftware
-- Software der Klasse IIa: Diagnoseunterstützende Software ohne direkte Therapieempfehlung
-- Software der Klasse IIb: Therapieunterstützende Software mit Behandlungsvorschlägen
-- Software der Klasse III: Lebenserhaltende oder kritische Interventionssoftware
-
-AUSWIRKUNGEN:
-Diese Entscheidung betrifft tausende Software-Entwickler in der EU und erfordert umfassende Compliance-Anpassungen.`,
-          tags: ['MDR', 'Software-Klassifizierung', 'EU-Recht', 'Standalone-Software', 'Compliance'],
-          source: 'eur-lex',
-          region: 'EU',
-          impactLevel: 'critical',
-          practicalImplications: [
-            'Neu-Bewertung aller Software-Medizinprodukte erforderlich',
-            'Anpassung der CE-Kennzeichnungsverfahren',
-            'Überarbeitung der technischen Dokumentation'
-          ]
-        }
-      ];
-
-      console.log(`[API] Enhanced legal cases returned: ${professionalLegalCases.length} items`);
+      console.log(`[API] Enhanced legal cases returned: ${legalCases.length} items`);
 
       res.json({
         success: true,
-        data: professionalLegalCases,
-        count: professionalLegalCases.length,
+        data: legalCases,
+        count: legalCases.length,
         timestamp: new Date().toISOString(),
         cached: false,
-        source: 'professional_mock_data'
+        source: 'database'
       });
     } catch (error) {
       console.error("[API] Enhanced legal cases error:", error);
@@ -1022,7 +863,7 @@ Diese Entscheidung betrifft tausende Software-Entwickler in der EU und erfordert
     }
   });
 
-  // Mock endpoint for dashboard stats, placeholder for actual implementation
+  // Dashboard stats endpoint - echte Daten aus der Datenbank
   // This route was misplaced and seems to be intended as part of the /api/dashboard/stats logic
   // If it's meant to be a separate endpoint, it needs a distinct path.
   // For now, consolidating it conceptually with dashboard stats.
@@ -1067,28 +908,23 @@ Diese Entscheidung betrifft tausende Software-Entwickler in der EU und erfordert
     // } else {
     //   throw new Error("Auth routes not found or not default export");
     // }
-    // For demonstration, directly defining mock auth routes if the import fails or is not present
-    throw new Error("Auth routes module not found, using mock routes.");
+    throw new Error("Auth routes module not found.");
   } catch (error) {
-    console.warn('⚠️ Auth routes not available:', error instanceof Error ? error.message : 'Unknown error');
-    // Create minimal auth endpoints for development
+    console.error('❌ Auth routes not available:', error instanceof Error ? error.message : 'Unknown error');
+    // Keine Mock-Auth-Routes mehr - Fehler zurückgeben
     app.post('/api/auth/login', (req, res) => {
-      console.log("Mock Login Attempt:", req.body);
-      res.json({
-        success: true,
-        user: { id: 'demo', email: 'demo@example.com', name: 'Demo User' },
-        message: 'Demo login successful'
+      res.status(501).json({ 
+        error: 'Authentication not implemented',
+        message: 'Auth routes module is required. Please implement authentication.'
       });
     });
 
     app.post('/api/auth/logout', (req, res) => {
-      res.json({ success: true, message: 'Logged out' });
+      res.status(501).json({ error: 'Authentication not implemented' });
     });
 
     app.get('/api/auth/profile', (req, res) => {
-      res.json({
-        user: { id: 'demo', email: 'demo@example.com', name: 'Demo User' }
-      });
+      res.status(501).json({ error: 'Authentication not implemented' });
     });
   }
 
@@ -1253,6 +1089,163 @@ Diese Entscheidung betrifft tausende Software-Entwickler in der EU und erfordert
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: "Failed to delete document" });
+    }
+  });
+
+  // Ongoing Approvals Endpoint - Projekte mit regulatory Status
+  app.get("/api/ongoing-approvals", async (req, res) => {
+    try {
+      console.log('[API] Fetching ongoing approvals (projects with regulatory status)');
+      // Hole Projekte mit Status regulatory_review, approval_pending oder in_development
+      const approvals = await dbStorage.getOngoingApprovals();
+      console.log(`[API] Returning ${approvals.length} ongoing approvals`);
+      res.json(approvals || []);
+    } catch (error: any) {
+      console.error('[API] Error fetching ongoing approvals:', error.message);
+      res.status(500).json({ error: 'Failed to fetch ongoing approvals', message: error.message });
+    }
+  });
+
+  app.post("/api/approvals", async (req, res) => {
+    try {
+      const approval = req.body;
+      // TODO: Implementiere echte Speicherung in Datenbank
+      res.status(501).json({ error: "Not implemented - requires database schema" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Endpoint zum Erstellen von Test-Projekten für laufende Zulassungen
+  app.post("/api/ongoing-approvals/create-test", async (req, res) => {
+    try {
+      console.log('[API] Creating test project for ongoing approval');
+      
+      // Parse estimated costs
+      let estimatedCostRegulatory = 50000;
+      if (req.body.estimatedCosts) {
+        const costStr = String(req.body.estimatedCosts).replace(/[€$k,]/g, '');
+        estimatedCostRegulatory = parseInt(costStr) * 1000;
+      }
+      
+      // Ensure targetMarkets is an array
+      let targetMarkets = ['EU'];
+      if (req.body.targetMarkets) {
+        if (Array.isArray(req.body.targetMarkets)) {
+          targetMarkets = req.body.targetMarkets;
+        } else if (typeof req.body.targetMarkets === 'string') {
+          try {
+            targetMarkets = JSON.parse(req.body.targetMarkets);
+          } catch (e) {
+            targetMarkets = [req.body.targetMarkets];
+          }
+        }
+      }
+      
+      // Prepare project data matching createProject function signature
+      const testProject = {
+        name: req.body.productName || 'Test Medizinprodukt',
+        description: req.body.description || 'Test-Produkt für laufende Zulassung',
+        deviceType: req.body.deviceType || 'Diagnostic Device',
+        deviceClass: req.body.deviceClass || 'Class IIa',
+        intendedUse: req.body.intendedUse || 'Medizinische Diagnostik',
+        therapeuticArea: req.body.therapeuticArea || 'Allgemein',
+        status: req.body.status || 'regulatory_review',
+        riskLevel: req.body.riskLevel || 'medium',
+        priority: req.body.priority || 1,
+        startDate: req.body.startDate || new Date().toISOString(),
+        targetSubmissionDate: req.body.submissionDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+        estimatedApprovalDate: req.body.expectedApproval || new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(),
+        targetMarkets: targetMarkets,
+        estimatedCostRegulatory: estimatedCostRegulatory,
+        metadata: {
+          company: req.body.company || 'Test Company GmbH',
+          contactPerson: req.body.contactPerson || 'Dr. Test Person',
+          challenges: req.body.challenges || [],
+          nextSteps: req.body.nextSteps || []
+        }
+      };
+
+      const project = await dbStorage.createProject(testProject);
+      console.log(`[API] Test project created: ${project.id}`);
+      
+      // Transform to OngoingApproval format for response
+      const ongoingApproval = await dbStorage.getOngoingApprovals();
+      const created = ongoingApproval.find((a: any) => a.id === project.id);
+      
+      res.json({
+        success: true,
+        project: project,
+        ongoingApproval: created,
+        message: 'Test project created successfully'
+      });
+    } catch (error: any) {
+      console.error('[API] Error creating test project:', error);
+      res.status(500).json({ 
+        error: 'Failed to create test project', 
+        message: error.message 
+      });
+    }
+  });
+
+  // Endpoint zum Abrufen aller Projekte (für Debugging)
+  app.get("/api/projects", async (req, res) => {
+    try {
+      const projects = await dbStorage.getAllProjects();
+      res.json(projects);
+    } catch (error: any) {
+      console.error('[API] Error fetching projects:', error);
+      res.status(500).json({ error: 'Failed to fetch projects', message: error.message });
+    }
+  });
+
+  // Debug-Endpoint: Zeigt detaillierte Info über laufende Zulassungen
+  app.get("/api/debug/ongoing-approvals", async (req, res) => {
+    try {
+      console.log('[DEBUG] Checking ongoing approvals...');
+      
+      // 1. Alle Projekte
+      const allProjects = await dbStorage.getAllProjects();
+      
+      // 2. Projekte nach Status gruppieren
+      const byStatus: Record<string, number> = {};
+      allProjects.forEach((p: any) => {
+        byStatus[p.status] = (byStatus[p.status] || 0) + 1;
+      });
+      
+      // 3. Relevante Projekte
+      const relevantStatuses = ['regulatory_review', 'approval_pending', 'in_development'];
+      const relevantProjects = allProjects.filter((p: any) => 
+        relevantStatuses.includes(p.status)
+      );
+      
+      // 4. Transformierte Daten
+      const ongoingApprovals = await dbStorage.getOngoingApprovals();
+      
+      res.json({
+        summary: {
+          totalProjects: allProjects.length,
+          relevantProjects: relevantProjects.length,
+          ongoingApprovals: ongoingApprovals.length
+        },
+        projectsByStatus: byStatus,
+        relevantProjects: relevantProjects.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          status: p.status,
+          device_class: p.device_class,
+          target_markets: p.target_markets,
+          created_at: p.created_at
+        })),
+        transformedApprovals: ongoingApprovals
+      });
+    } catch (error: any) {
+      console.error('[DEBUG] Error:', error);
+      res.status(500).json({ 
+        error: 'Debug check failed', 
+        message: error.message,
+        stack: error.stack
+      });
     }
   });
 }

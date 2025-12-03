@@ -139,3 +139,4 @@ GET /api/ongoing-approvals
 ---
 
 *Report generiert am: 2025-01-27*
+

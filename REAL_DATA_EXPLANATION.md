@@ -152,3 +152,4 @@ GET http://localhost:5000/api/regulatory-updates
 ---
 
 *Erklärung erstellt: 2025-01-27*
+

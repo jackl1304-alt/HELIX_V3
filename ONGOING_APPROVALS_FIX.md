@@ -164,3 +164,4 @@ curl http://localhost:5000/api/ongoing-approvals
 ---
 
 *Implementiert am: 2025-01-27*
+

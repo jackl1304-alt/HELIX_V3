@@ -97,3 +97,4 @@ http://localhost:5000/zulassungen/laufende
 ---
 
 *Status: 2025-01-27 - 2 Projekte im Backend, werden angezeigt*
+

@@ -225,3 +225,4 @@ Nach dem Import sollten in `/zulassungen/laufende` angezeigt werden:
 ---
 
 **Implementierung abgeschlossen**: 2025-01-27
+

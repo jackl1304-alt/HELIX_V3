@@ -242,3 +242,4 @@ SELECT title, published_date FROM regulatory_updates ORDER BY created_at DESC LI
 ---
 
 **Letzte Aktualisierung**: 2025-01-27
+

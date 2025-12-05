@@ -61,7 +61,7 @@ export class NISTService {
     return {
       tenantId,
       title,
-      category: 'standards' as const,
+      category: 'standard' as const,
       content: this.buildStandardContent(title, abstract, authors, standardCode),
       source: 'NIST',
       sourceUrl: pub?.pubLink || `https://csrc.nist.gov/publications/detail/${pub?.pubId || ''}`,
@@ -69,7 +69,6 @@ export class NISTService {
       status: 'published' as const,
       jurisdiction: 'USA',
       confidenceScore: 0.99,
-      dataType: 'standard',
       hashedTitle,
       metadata: {
         standard_code: standardCode,
@@ -191,21 +190,47 @@ ${abstract}
   }
 
   /**
-   * Get stats
+   * Get NIST standards statistics with series breakdown
    */
-  static async getStats(tenantId: string = 'default'): Promise<any> {
+  static async getStandardsStats(tenantId: string = 'default'): Promise<any> {
     const standards = await db.query.regulatoryUpdates.findMany({
       where: (t, { eq, and }) =>
         and(
           eq(t.tenantId, tenantId),
-          eq(t.dataType, 'standard'),
+          eq(t.category, 'standard'),
           eq(t.source, 'NIST')
         ),
     });
 
+    const bySeries: Record<string, number> = {};
+    const byTopic: Record<string, number> = {};
+    
+    standards.forEach((standard) => {
+      // Extract series (e.g., "SP 800-53" → "SP 800")
+      const title = standard.title || '';
+      const seriesMatch = title.match(/SP\s*(\d+)/);
+      const series = seriesMatch ? `SP ${seriesMatch[1]}` : 'Other';
+      bySeries[series] = (bySeries[series] || 0) + 1;
+      
+      // Group by topic
+      const topic = standard.metadata?.topic || 'General';
+      byTopic[topic] = (byTopic[topic] || 0) + 1;
+    });
+
+    // Standards updated in last 2 years considered "active"
+    const twoYearsAgo = new Date();
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+    const active = standards.filter(
+      (s) => s.date && new Date(s.date) > twoYearsAgo
+    ).length;
+
     return {
       total: standards.length,
+      active,
       source: 'NIST',
+      category: 'Standards',
+      bySeries,
+      byTopic,
       lastUpdated: standards.length > 0 ? standards[standards.length - 1].date : null,
     };
   }

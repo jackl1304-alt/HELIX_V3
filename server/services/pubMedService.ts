@@ -90,7 +90,7 @@ export class PubMedService {
     return {
       tenantId,
       title,
-      category: 'knowledge' as const,
+      category: 'research_paper' as const,
       content: this.buildPaperContent(title, authors, abstract, journal),
       source: 'PubMed Central',
       sourceUrl: `https://www.ncbi.nlm.nih.gov/pmc/articles/PMC${pmid}/`,
@@ -98,7 +98,6 @@ export class PubMedService {
       status: 'published' as const,
       jurisdiction: 'International',
       confidenceScore: 0.9,
-      dataType: 'research_paper',
       hashedTitle,
       metadata: {
         pmid,
@@ -222,20 +221,45 @@ ${abstract}
   }
 
   /**
-   * Get stats
+   * Get research papers statistics with year breakdown
    */
-  static async getStats(tenantId: string = 'default'): Promise<any> {
+  static async getResearchStats(tenantId: string = 'default'): Promise<any> {
     const papers = await db.query.regulatoryUpdates.findMany({
       where: (t, { eq, and }) =>
         and(
           eq(t.tenantId, tenantId),
-          eq(t.dataType, 'research_paper')
+          eq(t.category, 'research_paper')
         ),
     });
 
+    const byYear: Record<string, number> = {};
+    const byJournal: Record<string, number> = {};
+    
+    papers.forEach((paper) => {
+      // Group by year
+      const year = paper.date?.split('-')[0] || 'Unknown';
+      byYear[year] = (byYear[year] || 0) + 1;
+      
+      // Group by journal
+      const journal = paper.metadata?.journal || 'Unknown';
+      byJournal[journal] = (byJournal[journal] || 0) + 1;
+    });
+
+    // Recent papers (last 2 years) considered "active"
+    const currentYear = new Date().getFullYear();
+    const active = (byYear[currentYear] || 0) + (byYear[currentYear - 1] || 0);
+
     return {
       total: papers.length,
+      active,
       source: 'PubMed Central',
+      category: 'Research',
+      byYear,
+      byJournal: Object.fromEntries(
+        Object.entries(byJournal)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10) // Top 10 journals
+      ),
       lastUpdated: papers.length > 0 ? papers[papers.length - 1].date : null,
     };
   }

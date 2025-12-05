@@ -260,6 +260,59 @@ ${trial.eligibilityModule?.eligibilityCriteria || 'No eligibility criteria speci
     if (phases.includes('Phase 2')) return 'medium';
     return 'low';
   }
+
+  /**
+   * Get clinical trials statistics with status breakdown
+   */
+  async getTrialStats(tenantId: string = 'default'): Promise<any> {
+    const trials = await db.query.regulatoryUpdates.findMany({
+      where: (t, { eq, and }) =>
+        and(
+          eq(t.tenantId, tenantId),
+          eq(t.category, 'clinical_trial')
+        ),
+    });
+
+    const byStatus: Record<string, number> = {
+      recruiting: 0,
+      activeNotRecruiting: 0,
+      completed: 0,
+      terminated: 0,
+      suspended: 0,
+      unknown: 0,
+    };
+    
+    trials.forEach((trial) => {
+      const status = trial.metadata?.trial_status || 'unknown';
+      const normalized = status.toLowerCase().replace(/[\s_-]/g, '');
+      
+      if (normalized.includes('recruiting') && !normalized.includes('not')) {
+        byStatus.recruiting++;
+      } else if (normalized.includes('active') || normalized.includes('ongoing')) {
+        byStatus.activeNotRecruiting++;
+      } else if (normalized.includes('completed')) {
+        byStatus.completed++;
+      } else if (normalized.includes('terminated')) {
+        byStatus.terminated++;
+      } else if (normalized.includes('suspended')) {
+        byStatus.suspended++;
+      } else {
+        byStatus.unknown++;
+      }
+    });
+
+    const active = byStatus.recruiting + byStatus.activeNotRecruiting;
+
+    return {
+      total: trials.length,
+      active,
+      ongoing: active, // Alias for "laufend"
+      source: 'ClinicalTrials.gov',
+      category: 'Clinical',
+      byStatus,
+      lastUpdated: trials.length > 0 ? trials[trials.length - 1].date : null,
+    };
+  }
 }
 
 export const clinicalTrialsService = new ClinicalTrialsService();

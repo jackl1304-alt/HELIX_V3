@@ -13,9 +13,30 @@ interface USPTOPatent {
   issue_date?: string;
   patent_number?: string;
   inventor_name?: string[];
+  inventor_first_name?: string[];
+  inventor_last_name?: string[];
   assignee?: string;
+  assignee_organization?: string[];
+  assignee_city?: string[];
+  assignee_state?: string[];
+  assignee_country?: string[];
   ipc_code?: string;
+  cpc_subsection_id?: string[];
+  cpc_group_id?: string[];
+  cpc_subgroup_id?: string[];
+  wipo_kind?: string;
+  num_claims?: number;
+  num_figures?: number;
+  num_sheets?: number;
+  application_date?: string;
+  application_number?: string;
+  cited_patent_number?: string[];
+  citedby_patent_number?: string[];
+  num_us_patent_citations?: number;
+  num_foreign_citations?: number;
+  num_us_application_citations?: number;
   primary_examiner?: string;
+  assistant_examiner?: string;
   app_filing_date?: string;
   app_exam_name?: string;
 }
@@ -80,7 +101,16 @@ export class PatentUSPTOService {
           q: query,
           start: pageStart,
           rows: pageSize,
-          fl: 'patent_id,patent_title,patent_abstract,filing_date,issue_date,patent_number,inventor_name,assignee,ipc_code,primary_examiner,app_filing_date',
+          // Extended field list - capture ALL available fields
+          fl: 'patent_id,patent_title,patent_abstract,filing_date,issue_date,patent_number,' +
+              'inventor_name,inventor_first_name,inventor_last_name,' +
+              'assignee,assignee_organization,assignee_city,assignee_state,assignee_country,' +
+              'ipc_code,cpc_subsection_id,cpc_group_id,cpc_subgroup_id,' +
+              'patent_type,wipo_kind,num_claims,num_figures,num_sheets,' +
+              'application_date,application_number,' +
+              'cited_patent_number,citedby_patent_number,' +
+              'num_us_patent_citations,num_foreign_citations,num_us_application_citations,' +
+              'primary_examiner,assistant_examiner,app_filing_date',
           wt: 'json',
         },
         timeout: 30000,
@@ -116,16 +146,55 @@ export class PatentUSPTOService {
       status: 'published' as const,
       jurisdiction: 'US',
       confidenceScore: 0.95,
-      dataType: 'patent',
       hashedTitle,
       metadata: {
+        // Basic Patent Info
         patent_authority: authority,
         patent_number: patent.patent_number,
+        patent_type: patent.patent_type || 'Utility',
+        wipo_kind: patent.wipo_kind,
+        
+        // Parties
         patent_applicant: patent.assignee || 'Unknown',
         patent_inventor: patent.inventor_name?.join('; ') || 'Unknown',
+        inventor_first_names: patent.inventor_first_name,
+        inventor_last_names: patent.inventor_last_name,
+        assignee_organizations: patent.assignee_organization,
+        assignee_cities: patent.assignee_city,
+        assignee_states: patent.assignee_state,
+        assignee_countries: patent.assignee_country,
+        
+        // Classifications (IPC + CPC)
         patent_ipc: patent.ipc_code || 'N/A',
+        cpc_subsections: patent.cpc_subsection_id,
+        cpc_groups: patent.cpc_group_id,
+        cpc_subgroups: patent.cpc_subgroup_id,
+        
+        // Dates
         filing_date: patent.filing_date,
         issue_date: patent.issue_date,
+        application_date: patent.application_date,
+        
+        // Application Info
+        application_number: patent.application_number,
+        
+        // Document Metrics
+        num_claims: patent.num_claims,
+        num_figures: patent.num_figures,
+        num_sheets: patent.num_sheets,
+        
+        // Citations (forward + backward)
+        cited_patents: patent.cited_patent_number,
+        citing_patents: patent.citedby_patent_number,
+        num_us_patent_citations: patent.num_us_patent_citations,
+        num_foreign_citations: patent.num_foreign_citations,
+        num_us_application_citations: patent.num_us_application_citations,
+        
+        // Examiners
+        primary_examiner: patent.primary_examiner,
+        assistant_examiner: patent.assistant_examiner,
+        
+        // Content
         abstract: patent.patent_abstract,
       },
     };
@@ -287,7 +356,7 @@ export class PatentUSPTOService {
         .where(
           and(
             eq(regulatoryUpdates.tenantId, tenantId),
-            eq(regulatoryUpdates.dataType, 'patent')
+            eq(regulatoryUpdates.category, 'patent')
           )
         );
 
@@ -309,7 +378,7 @@ export class PatentUSPTOService {
         byYear,
         lastUpdated:
           allPatents.length > 0
-            ? new Date(Math.max(...allPatents.map((p) => p.date.getTime())))
+            ? new Date(Math.max(...allPatents.map((p: any) => new Date(p.publishedDate || p.createdAt).getTime())))
             : null,
       };
     } catch (error) {
@@ -333,7 +402,7 @@ export class PatentUSPTOService {
         .where(
           and(
             eq(regulatoryUpdates.tenantId, tenantId),
-            eq(regulatoryUpdates.dataType, 'patent')
+            eq(regulatoryUpdates.category, 'patent')
           )
         )
         .limit(limit);

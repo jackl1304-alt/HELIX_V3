@@ -460,4 +460,63 @@ router.put('/sources/:id/disable', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/admin/sources/patents/sync
+ * Sync patents from USPTO
+ */
+router.post('/patents/sync', async (req: Request, res: Response) => {
+  try {
+    const { query = '*:*', maxPages = 10, tenantId = 'default' } = req.body;
+
+    console.log(`[ADMIN] Starting patent sync: query=${query}, maxPages=${maxPages}`);
+
+    // Dynamically import to avoid circular dependencies
+    const { PatentUSPTOService } = await import('../services/patentUSPTOService');
+
+    // Start sync in background
+    const syncPromise = PatentUSPTOService.syncPatents(query, maxPages, tenantId);
+
+    res.json({
+      message: 'Patent sync started',
+      query,
+      maxPages,
+      tenantId,
+      status: 'syncing',
+    });
+
+    // Wait for sync to complete
+    syncPromise
+      .then((result) => {
+        console.log(`[ADMIN] Patent sync completed:`, result);
+      })
+      .catch((error) => {
+        console.error(`[ADMIN] Patent sync failed:`, error);
+      });
+  } catch (error) {
+    console.error('Error starting patent sync:', error);
+    res.status(500).json({ error: 'Failed to start patent sync' });
+  }
+});
+
+/**
+ * GET /api/admin/sources/patents/stats
+ * Get patent statistics
+ */
+router.get('/patents/stats', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.query.tenantId as string || 'default';
+
+    const { PatentUSPTOService } = await import('../services/patentUSPTOService');
+    const stats = await PatentUSPTOService.getPatentStats(tenantId);
+
+    res.json({
+      ...stats,
+      message: 'Patent statistics retrieved',
+    });
+  } catch (error) {
+    console.error('Error getting patent stats:', error);
+    res.status(500).json({ error: 'Failed to retrieve patent statistics' });
+  }
+});
+
 export const adminSourcesRouter = router;

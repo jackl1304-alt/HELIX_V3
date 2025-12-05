@@ -127,6 +127,7 @@ const getNavigationStructure = (t: (key: string) => string): Record<string, Navi
   advanced: {
     title: "Professional Tools",
     items: [
+      { name: "📊 Data Source Details", href: "/admin/data-sources-details", icon: Database, badge: "Neu" },
       { name: "Data Collection Center", href: "/data-collection-center", icon: Database, badge: "Live" },
       { name: t('nav.dataCollection'), href: "/data-collection", icon: Database },
       { name: t('nav.newsletterAdmin'), href: "/newsletter-admin", icon: Mail },

@@ -87,6 +87,11 @@ const ENStandards = withErrorHandling(() => import("@/pages/en-standards"));
 const AAMIStandards = withErrorHandling(() => import("@/pages/aami-standards"));
 const EUMDR = withErrorHandling(() => import("@/pages/eu-mdr"));
 
+// Admin Data Sources
+const DataSourceDetailsPage = withErrorHandling(() => import("@/pages/admin/DataSourceDetailsPage"));
+const AdminDataSources = withErrorHandling(() => import("@/pages/admin/data-sources"));
+const DataSourcesNavigation = withErrorHandling(() => import("@/pages/admin/DataSourcesNavigation"));
+
 // Import DataCollectionCenter statically
 // Note: This route is handled statically due to potential direct access needs,
 // but the error handling wrapper could be applied if it were to be dynamically loaded.
@@ -217,6 +222,11 @@ function App() {
                   <Route path="/content-analysis" component={ContentAnalysis} />
                   <Route path="/analytics-insights" component={AnalyticsInsights} />
                   <Route path="/grip-integration" component={GripIntegration} />
+                  
+                  {/* Admin Data Sources */}
+                  <Route path="/admin/data-sources" component={AdminDataSources} />
+                  <Route path="/admin/data-sources-details" component={DataSourceDetailsPage} />
+                  <Route path="/admin/data-sources-nav" component={DataSourcesNavigation} />
 
                   {/* Customer Portal Routes */}
                   <Route path="/customer/dashboard" component={CustomerDashboard} />

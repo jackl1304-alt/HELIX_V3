@@ -1,0 +1,67 @@
+#!/usr/bin/expect -f
+set timeout 180
+set password "KkZrHw5wrJJnn6TH"
+
+# 1. Create archive with all new code
+spawn bash -c "cd /workspaces/HELIX_V3 && tar czf /tmp/helix-latest.tar.gz dist/ package.json package-lock.json server/ client/ shared/ scripts/ drizzle.config.ts"
+expect eof
+
+# 2. Upload archive
+puts "\n📤 Uploading archive to server...\n"
+spawn scp /tmp/helix-latest.tar.gz root@152.53.191.99:/tmp/
+expect {
+    "password:" {
+        send "$password\r"
+        expect eof
+    }
+    "yes/no" {
+        send "yes\r"
+        expect "password:"
+        send "$password\r"
+        expect eof
+    }
+}
+
+# 3. Deploy on server
+puts "\n🚀 Deploying on server...\n"
+spawn ssh root@152.53.191.99
+expect {
+    "password:" {
+        send "$password\r"
+    }
+    "yes/no" {
+        send "yes\r"
+        expect "password:"
+        send "$password\r"
+    }
+}
+
+expect "# "
+send "cd /opt/helix || mkdir -p /opt/helix && cd /opt/helix\r"
+expect "# "
+
+send "pm2 stop helix 2>/dev/null || true\r"
+expect "# "
+
+send "rm -rf dist node_modules\r"
+expect "# "
+
+send "tar -xzf /tmp/helix-latest.tar.gz\r"
+expect "# "
+
+send "npm install --omit=dev\r"
+expect "# " timeout 180
+
+send "pm2 start dist/public/../index.js --name helix --env production || pm2 start tsx --name helix -- server/index.ts\r"
+expect "# "
+
+send "pm2 save\r"
+expect "# "
+
+send "pm2 status\r"
+expect "# "
+
+send "exit\r"
+expect eof
+
+puts "\n✅ Deployment complete!\n"

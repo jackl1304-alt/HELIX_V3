@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { db } from "../storage";
 import { regulatoryUpdates, dataSources } from "../../shared/schema";
 import { Logger } from "./logger.service";
@@ -8,47 +8,36 @@ import { callGroqChatStreaming } from "./groqService";
 const logger = new Logger("AgentRouter");
 
 // Zentrales Modell: per Replit Secret/Env überschreibbar
-// Empfehlung:
-// OPENROUTER_MODEL=anthropic/claude-3.5-haiku
 const MODEL =
   process.env.OPENROUTER_MODEL ||
-  process.env.ANTHROPIC_MODEL ||
   "anthropic/claude-3.5-haiku";
 
 // Optionaler Fallback
 const ENABLE_GROQ_FALLBACK = process.env.ENABLE_GROQ_FALLBACK !== "0";
 
-// Initialize Anthropic client with OpenRouter support
-let client: Anthropic | null = null;
+// OpenAI-kompatibler Client (OpenRouter nutzt OpenAI API Format)
+let client: OpenAI | null = null;
 let usingOpenRouter = false;
 
 try {
   const openRouterKey = process.env.OPENROUTER_API_KEY;
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
   if (openRouterKey) {
     usingOpenRouter = true;
-    client = new Anthropic({
+    client = new OpenAI({
       apiKey: openRouterKey,
       baseURL: "https://openrouter.ai/api/v1",
+      defaultHeaders: {
+        "HTTP-Referer": "https://helix.deltaways.de",
+        "X-Title": "Helix Regulatory Intelligence",
+      },
     });
-    logger.info("Using OpenRouter via Anthropic SDK", {
-      model: MODEL,
-    });
-  } else if (anthropicKey) {
-    client = new Anthropic({
-      apiKey: anthropicKey,
-    });
-    logger.info("Using direct Anthropic API", {
-      model: MODEL,
-    });
+    logger.info("Using OpenRouter via OpenAI-compatible SDK", { model: MODEL });
   } else {
-    logger.warn("No OPENROUTER_API_KEY or ANTHROPIC_API_KEY set");
+    logger.warn("OPENROUTER_API_KEY not set — AI features disabled");
   }
 } catch (error: any) {
-  logger.warn("Failed to initialize Anthropic client", {
-    error: error?.message,
-  });
+  logger.warn("Failed to initialize OpenRouter client", { error: error?.message });
 }
 
 /**
@@ -121,24 +110,16 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
 }`;
 
   try {
-    const response = await client.messages.create({
+    const response = await client.chat.completions.create({
       model: MODEL,
       max_tokens: 500,
-      system: systemPrompt,
       messages: [
-        {
-          role: "user",
-          content: userQuery,
-        },
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userQuery },
       ],
     });
 
-    const content = response.content[0];
-    if (content.type !== "text") {
-      throw new Error("Unexpected response type");
-    }
-
-    let jsonText = content.text.trim();
+    let jsonText = (response.choices[0].message.content || "").trim();
     if (jsonText.startsWith("```json")) jsonText = jsonText.slice(7);
     if (jsonText.startsWith("```")) jsonText = jsonText.slice(3);
     if (jsonText.endsWith("```")) jsonText = jsonText.slice(0, -3);
@@ -239,21 +220,16 @@ Provide a concise, helpful analysis.`;
     };
   }
 
-  const response = await client!.messages.create({
+  const response = await client!.chat.completions.create({
     model: MODEL,
     max_tokens: 1000,
-    system: systemPrompt,
     messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
+      { role: "system", content: systemPrompt },
+      { role: "user", content: prompt },
     ],
   });
 
-  const content = response.content;
-  const analysis =
-    content.type === "text" ? content.text : "Unable to analyze FDA updates";
+  const analysis = response.choices[0].message.content || "Unable to analyze FDA updates";
 
   return {
     agent: "FDA",
@@ -333,21 +309,16 @@ Provide a focused analysis.`;
     };
   }
 
-  const response = await client!.messages.create({
+  const response = await client!.chat.completions.create({
     model: MODEL,
     max_tokens: 1000,
-    system: systemPrompt,
     messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
+      { role: "system", content: systemPrompt },
+      { role: "user", content: prompt },
     ],
   });
 
-  const content = response.content;
-  const analysis =
-    content.type === "text" ? content.text : "Unable to analyze EMA updates";
+  const analysis = response.choices[0].message.content || "Unable to analyze EMA updates";
 
   return {
     agent: "EMA",
@@ -421,23 +392,16 @@ Analyze compliance implications and provide recommendations.`;
     };
   }
 
-  const response = await client!.messages.create({
+  const response = await client!.chat.completions.create({
     model: MODEL,
     max_tokens: 1200,
-    system: systemPrompt,
     messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
+      { role: "system", content: systemPrompt },
+      { role: "user", content: prompt },
     ],
   });
 
-  const content = response.content;
-  const analysis =
-    content.type === "text"
-      ? content.text
-      : "Unable to perform compliance analysis";
+  const analysis = response.choices[0].message.content || "Unable to perform compliance analysis";
 
   return {
     agent: "Compliance",
@@ -605,21 +569,16 @@ Provide a helpful, comprehensive response.`;
     };
   }
 
-  const response = await client!.messages.create({
+  const response = await client!.chat.completions.create({
     model: MODEL,
     max_tokens: 1000,
-    system: systemPrompt,
     messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
+      { role: "system", content: systemPrompt },
+      { role: "user", content: prompt },
     ],
   });
 
-  const content = response.content;
-  const analysis =
-    content.type === "text" ? content.text : "Unable to process query";
+  const analysis = response.choices[0].message.content || "Unable to process query";
 
   return {
     agent: "General",

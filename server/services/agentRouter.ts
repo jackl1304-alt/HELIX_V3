@@ -2,34 +2,53 @@ import Anthropic from "@anthropic-ai/sdk";
 import { db } from "../storage";
 import { regulatoryUpdates, dataSources } from "../../shared/schema";
 import { Logger } from "./logger.service";
-import { sql, eq, inArray, and, or, ilike } from "drizzle-orm";
+import { sql, inArray, and, or, ilike } from "drizzle-orm";
 import { callGroqChatStreaming } from "./groqService";
 
 const logger = new Logger("AgentRouter");
 
+// Zentrales Modell: per Replit Secret/Env überschreibbar
+// Empfehlung:
+// OPENROUTER_MODEL=anthropic/claude-3.5-haiku
+const MODEL =
+  process.env.OPENROUTER_MODEL ||
+  process.env.ANTHROPIC_MODEL ||
+  "anthropic/claude-3.5-haiku";
+
+// Optionaler Fallback
+const ENABLE_GROQ_FALLBACK = process.env.ENABLE_GROQ_FALLBACK !== "0";
+
 // Initialize Anthropic client with OpenRouter support
 let client: Anthropic | null = null;
+let usingOpenRouter = false;
+
 try {
-  // Unterstützt sowohl Anthropic als auch OpenRouter (für Claude)
-  const apiKey = process.env.ANTHROPIC_API_KEY || process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    logger.warn("ANTHROPIC_API_KEY not set - using Groq fallback");
+  const openRouterKey = process.env.OPENROUTER_API_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+
+  if (openRouterKey) {
+    usingOpenRouter = true;
+    client = new Anthropic({
+      apiKey: openRouterKey,
+      baseURL: "https://openrouter.ai/api/v1",
+    });
+    logger.info("Using OpenRouter via Anthropic SDK", {
+      model: MODEL,
+    });
+  } else if (anthropicKey) {
+    client = new Anthropic({
+      apiKey: anthropicKey,
+    });
+    logger.info("Using direct Anthropic API", {
+      model: MODEL,
+    });
   } else {
-    // Prüfe ob es ein OpenRouter Key ist
-    const isOpenRouter = apiKey.startsWith('sk-or-v1-');
-    if (isOpenRouter) {
-      // OpenRouter unterstützt Anthropic API über ihre Proxy
-      client = new Anthropic({
-        apiKey: apiKey,
-        baseURL: 'https://openrouter.ai/api/v1'
-      });
-      logger.info("Using OpenRouter API for Anthropic/Claude");
-    } else {
-      client = new Anthropic({ apiKey });
-    }
+    logger.warn("No OPENROUTER_API_KEY or ANTHROPIC_API_KEY set");
   }
 } catch (error: any) {
-  logger.warn("Failed to initialize Anthropic client - using Groq fallback", { error: error.message });
+  logger.warn("Failed to initialize Anthropic client", {
+    error: error?.message,
+  });
 }
 
 /**
@@ -38,7 +57,13 @@ try {
  */
 
 interface RoutingDecision {
-  agent: "fda" | "ema" | "health_canada" | "compliance" | "analytics" | "general";
+  agent:
+    | "fda"
+    | "ema"
+    | "health_canada"
+    | "compliance"
+    | "analytics"
+    | "general";
   confidence: number;
   reasoning: string;
   parameters: Record<string, any>;
@@ -63,14 +88,13 @@ interface AgentResponse {
  * Route user query to appropriate agent using LLM
  */
 async function routeQuery(userQuery: string): Promise<RoutingDecision> {
-  // Use Groq if Anthropic not available
   if (!client) {
-    logger.info("Anthropic not available - using Groq for routing");
+    logger.info("Anthropic/OpenRouter client not available");
     return {
       agent: "general",
       confidence: 0.8,
-      reasoning: "Groq fallback routing",
-      parameters: {}
+      reasoning: "No Anthropic/OpenRouter client available",
+      parameters: {},
     };
   }
 
@@ -97,10 +121,8 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
 }`;
 
   try {
-    if (!client) throw new Error("Using Groq fallback - Anthropic not available");
-
-    const response = await client!.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+    const response = await client.messages.create({
+      model: MODEL,
       max_tokens: 500,
       system: systemPrompt,
       messages: [
@@ -116,28 +138,24 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
       throw new Error("Unexpected response type");
     }
 
-    // Clean response - remove markdown code blocks if present
     let jsonText = content.text.trim();
-    if (jsonText.startsWith("```json")) {
-      jsonText = jsonText.slice(7);
-    }
-    if (jsonText.startsWith("```")) {
-      jsonText = jsonText.slice(3);
-    }
-    if (jsonText.endsWith("```")) {
-      jsonText = jsonText.slice(0, -3);
-    }
+    if (jsonText.startsWith("```json")) jsonText = jsonText.slice(7);
+    if (jsonText.startsWith("```")) jsonText = jsonText.slice(3);
+    if (jsonText.endsWith("```")) jsonText = jsonText.slice(0, -3);
 
     const routing = JSON.parse(jsonText) as RoutingDecision;
+
     logger.info("Query routed", {
       agent: routing.agent,
       confidence: routing.confidence,
+      model: MODEL,
+      usingOpenRouter,
     });
 
     return routing;
   } catch (error: any) {
     logger.error("Routing error", { error: error.message });
-    // Fallback to general agent
+
     return {
       agent: "general",
       confidence: 0.5,
@@ -152,11 +170,10 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
  */
 async function fdaAgent(
   query: string,
-  _parameters: Record<string, any>
+  _parameters: Record<string, any>,
 ): Promise<AgentResponse> {
   const startTime = Date.now();
 
-  // Query using correct column names
   const fdaUpdates = await db
     .select({
       id: regulatoryUpdates.id,
@@ -166,18 +183,23 @@ async function fdaAgent(
       publishedDate: regulatoryUpdates.publishedDate,
     })
     .from(regulatoryUpdates)
-    .where(sql`LOWER(title) LIKE LOWER(${`%${query}%`}) OR LOWER(description) LIKE LOWER(${`%${query}%`})`)
+    .where(
+      sql`LOWER(title) LIKE LOWER(${`%${query}%`}) OR LOWER(description) LIKE LOWER(${`%${query}%`})`,
+    )
     .orderBy(sql`published_date DESC`)
     .limit(10);
 
-  // Get source names
   const sourceIds = fdaUpdates.map((u) => u.sourceId).filter(Boolean);
-  const sourceInfo = sourceIds.length > 0
-    ? await db.select().from(dataSources).where(inArray(dataSources.id, sourceIds as string[]))
-    : [];
+  const sourceInfo =
+    sourceIds.length > 0
+      ? await db
+          .select()
+          .from(dataSources)
+          .where(inArray(dataSources.id, sourceIds as string[]))
+      : [];
 
   const sourceMap = Object.fromEntries(
-    sourceInfo.map((s: any) => [s.id, s.name])
+    sourceInfo.map((s: any) => [s.id, s.name]),
   );
 
   const systemPrompt = `You are an FDA regulatory expert. Analyze these FDA regulatory updates and provide insights.
@@ -189,14 +211,13 @@ FDA Updates found: ${fdaUpdates.length}
 ${fdaUpdates
   .map(
     (row) =>
-      `- ${row.title} (${sourceMap[row.sourceId || ''] || row.sourceId || 'Unknown'}) - ${row.publishedDate}`
+      `- ${row.title} (${sourceMap[row.sourceId || ""] || row.sourceId || "Unknown"}) - ${row.publishedDate}`,
   )
   .join("\n")}
 
 Provide a concise, helpful analysis.`;
 
-  // Use Groq fallback if Anthropic not available
-  if (!client) {
+  if (!client && ENABLE_GROQ_FALLBACK) {
     logger.info("FDA Agent: Using Groq fallback");
     const analysis = await callGroqChatStreaming(prompt, systemPrompt);
 
@@ -206,7 +227,7 @@ Provide a concise, helpful analysis.`;
       sources: fdaUpdates
         .map((row) => ({
           title: row.title,
-          source: sourceMap[row.sourceId || ''] || row.sourceId || "Unknown",
+          source: sourceMap[row.sourceId || ""] || row.sourceId || "Unknown",
           date: row.publishedDate?.toISOString() || new Date().toISOString(),
           relevanceScore: 0.85,
         }))
@@ -218,8 +239,8 @@ Provide a concise, helpful analysis.`;
     };
   }
 
-  const response = await client.messages.create({
-    model: "claude-3-5-sonnet-20241022",
+  const response = await client!.messages.create({
+    model: MODEL,
     max_tokens: 1000,
     system: systemPrompt,
     messages: [
@@ -230,7 +251,7 @@ Provide a concise, helpful analysis.`;
     ],
   });
 
-  const content = response.content[0];
+  const content = response.content;
   const analysis =
     content.type === "text" ? content.text : "Unable to analyze FDA updates";
 
@@ -257,7 +278,7 @@ Provide a concise, helpful analysis.`;
  */
 async function emaAgent(
   query: string,
-  _parameters: Record<string, any>
+  _parameters: Record<string, any>,
 ): Promise<AgentResponse> {
   const startTime = Date.now();
 
@@ -270,7 +291,9 @@ async function emaAgent(
       publishedDate: regulatoryUpdates.publishedDate,
     })
     .from(regulatoryUpdates)
-    .where(sql`LOWER(title) LIKE LOWER(${`%${query}%`}) OR LOWER(description) LIKE LOWER(${`%${query}%`})`)
+    .where(
+      sql`LOWER(title) LIKE LOWER(${`%${query}%`}) OR LOWER(description) LIKE LOWER(${`%${query}%`})`,
+    )
     .orderBy(sql`published_date DESC`)
     .limit(10);
 
@@ -282,15 +305,13 @@ Provide insights on device approvals, CE marking, and European compliance requir
 EMA Updates found: ${emaUpdates.length}
 ${emaUpdates
   .map(
-    (row) =>
-      `- ${row.title} (Source: ${row.sourceId}) - ${row.publishedDate}`
+    (row) => `- ${row.title} (Source: ${row.sourceId}) - ${row.publishedDate}`,
   )
   .join("\n")}
 
 Provide a focused analysis.`;
 
-  // Use Groq fallback if Anthropic not available
-  if (!client) {
+  if (!client && ENABLE_GROQ_FALLBACK) {
     logger.info("EMA Agent: Using Groq fallback");
     const analysis = await callGroqChatStreaming(prompt, systemPrompt);
 
@@ -312,8 +333,8 @@ Provide a focused analysis.`;
     };
   }
 
-  const response = await client.messages.create({
-    model: "claude-3-5-sonnet-20241022",
+  const response = await client!.messages.create({
+    model: MODEL,
     max_tokens: 1000,
     system: systemPrompt,
     messages: [
@@ -324,7 +345,7 @@ Provide a focused analysis.`;
     ],
   });
 
-  const content = response.content[0];
+  const content = response.content;
   const analysis =
     content.type === "text" ? content.text : "Unable to analyze EMA updates";
 
@@ -351,11 +372,10 @@ Provide a focused analysis.`;
  */
 async function complianceAgent(
   query: string,
-  _parameters: Record<string, any>
+  _parameters: Record<string, any>,
 ): Promise<AgentResponse> {
   const startTime = Date.now();
 
-  // Get all recent updates for compliance analysis
   const allUpdates = await db
     .select({
       id: regulatoryUpdates.id,
@@ -374,16 +394,12 @@ Provide actionable recommendations for medical device manufacturers.`;
 
 Recent regulatory updates (last 20):
 ${allUpdates
-  .map(
-    (u: any) =>
-      `- ${u.title} (Source: ${u.sourceId}) - ${u.publishedDate}`
-  )
+  .map((u: any) => `- ${u.title} (Source: ${u.sourceId}) - ${u.publishedDate}`)
   .join("\n")}
 
 Analyze compliance implications and provide recommendations.`;
 
-  // Use Groq fallback if Anthropic not available
-  if (!client) {
+  if (!client && ENABLE_GROQ_FALLBACK) {
     logger.info("Compliance Agent: Using Groq fallback");
     const analysis = await callGroqChatStreaming(prompt, systemPrompt);
 
@@ -405,8 +421,8 @@ Analyze compliance implications and provide recommendations.`;
     };
   }
 
-  const response = await client.messages.create({
-    model: "claude-3-5-sonnet-20241022",
+  const response = await client!.messages.create({
+    model: MODEL,
     max_tokens: 1200,
     system: systemPrompt,
     messages: [
@@ -417,7 +433,7 @@ Analyze compliance implications and provide recommendations.`;
     ],
   });
 
-  const content = response.content[0];
+  const content = response.content;
   const analysis =
     content.type === "text"
       ? content.text
@@ -446,62 +462,67 @@ Analyze compliance implications and provide recommendations.`;
  */
 async function generalAgent(
   query: string,
-  _parameters: Record<string, any>
+  _parameters: Record<string, any>,
 ): Promise<AgentResponse> {
   const startTime = Date.now();
 
-  // Extract keywords for intelligent search (supports German umlauts)
   const keywords = query.toLowerCase().match(/[a-zäöüß]{4,}/gi) || [];
-  const searchTerms = keywords.filter(k =>
-    !['what', 'when', 'where', 'which', 'latest', 'sind', 'über', 'neuesten', 'gibt', 'neues', 'oder'].includes(k)
+  const searchTerms = keywords.filter(
+    (k) =>
+      ![
+        "what",
+        "when",
+        "where",
+        "which",
+        "latest",
+        "sind",
+        "über",
+        "neuesten",
+        "gibt",
+        "neues",
+        "oder",
+      ].includes(k),
   );
 
-  // German to English medical device translations with compound splitting
   const translations: Record<string, string[]> = {
-    'beinschrauben': ['screw', 'bone', 'orthopedic', 'leg'],
-    'knieschrauben': ['screw', 'knee', 'orthopedic'],
-    'hüftimplantat': ['implant', 'hip', 'orthopedic'],
-    'knieimplantat': ['implant', 'knee', 'orthopedic'],
-    'orthopädische': ['orthopedic', 'orthopaedic'],
-    'implantate': ['implant'],
-    'schrauben': ['screw'],
-    'platte': ['plate'],
-    'nagel': ['nail', 'rod'],
-    'knochen': ['bone'],
+    beinschrauben: ["screw", "bone", "orthopedic", "leg"],
+    knieschrauben: ["screw", "knee", "orthopedic"],
+    hüftimplantat: ["implant", "hip", "orthopedic"],
+    knieimplantat: ["implant", "knee", "orthopedic"],
+    orthopädische: ["orthopedic", "orthopaedic"],
+    implantate: ["implant"],
+    schrauben: ["screw"],
+    platte: ["plate"],
+    nagel: ["nail", "rod"],
+    knochen: ["bone"],
   };
 
-  // Expand search terms with translations + add single-word variants
   const expandedTerms: string[] = [...searchTerms];
-  searchTerms.forEach(term => {
-    if (translations[term]) {
-      expandedTerms.push(...translations[term]);
-    }
-    // Always add single-word device keywords
-    if (term.includes('schrauben')) expandedTerms.push('screw');
-    if (term.includes('implantat')) expandedTerms.push('implant');
-    if (term.includes('platte')) expandedTerms.push('plate');
-    if (term.includes('nagel')) expandedTerms.push('nail', 'rod');
+  searchTerms.forEach((term) => {
+    if (translations[term]) expandedTerms.push(...translations[term]);
+    if (term.includes("schrauben")) expandedTerms.push("screw");
+    if (term.includes("implantat")) expandedTerms.push("implant");
+    if (term.includes("platte")) expandedTerms.push("plate");
+    if (term.includes("nagel")) expandedTerms.push("nail", "rod");
   });
 
-  // Build search query with keyword matching (OR across all keywords)
-  // Prioritize FDA 510(k), PMA, and patent sources for Bereich 3
   let allUpdates: any[] = [];
   if (expandedTerms.length > 0) {
-    // Create OR conditions for each keyword (title OR description)
-    const keywordConditions = expandedTerms.map(term =>
+    const keywordConditions = expandedTerms.map((term) =>
       or(
         ilike(regulatoryUpdates.title, `%${term}%`),
-        ilike(regulatoryUpdates.description, `%${term}%`)
-      )
+        ilike(regulatoryUpdates.description, `%${term}%`),
+      ),
     );
 
-    // Combine all keyword conditions with OR
     const keywordFilter = or(...keywordConditions);
+    const deviceSources = [
+      "fda_510k",
+      "fda_pma",
+      "health_canada_mdall",
+      "ema_epar",
+    ];
 
-    // Device-specific sources (FDA, EMA, Health Canada)
-    const deviceSources = ['fda_510k', 'fda_pma', 'health_canada_mdall', 'ema_epar'];
-
-    // Try device-specific sources first
     allUpdates = await db
       .select({
         id: regulatoryUpdates.id,
@@ -511,14 +532,12 @@ async function generalAgent(
         publishedDate: regulatoryUpdates.publishedDate,
       })
       .from(regulatoryUpdates)
-      .where(and(
-        keywordFilter,
-        inArray(regulatoryUpdates.sourceId, deviceSources)
-      ))
+      .where(
+        and(keywordFilter, inArray(regulatoryUpdates.sourceId, deviceSources)),
+      )
       .orderBy(sql`published_date DESC`)
       .limit(30);
 
-    // Fallback to all sources if no device-specific results
     if (allUpdates.length === 0) {
       allUpdates = await db
         .select({
@@ -535,7 +554,6 @@ async function generalAgent(
     }
   }
 
-  // Fallback to recent updates if no keyword matches
   if (allUpdates.length === 0) {
     allUpdates = await db
       .select({
@@ -559,14 +577,13 @@ Available regulatory updates (from all sources):
 ${allUpdates
   .map(
     (u: any) =>
-      `- ${u.title} (${u.sourceId})\n  ${u.description?.substring(0, 100) || "No description"}`
+      `- ${u.title} (${u.sourceId})\n  ${u.description?.substring(0, 100) || "No description"}`,
   )
   .join("\n")}
 
 Provide a helpful, comprehensive response.`;
 
-  // Use Groq fallback if Anthropic not available
-  if (!client) {
+  if (!client && ENABLE_GROQ_FALLBACK) {
     logger.info("General Agent: Using Groq fallback");
     const analysis = await callGroqChatStreaming(prompt, systemPrompt);
 
@@ -589,7 +606,7 @@ Provide a helpful, comprehensive response.`;
   }
 
   const response = await client!.messages.create({
-    model: "claude-3-5-sonnet-20241022",
+    model: MODEL,
     max_tokens: 1000,
     system: systemPrompt,
     messages: [
@@ -600,7 +617,7 @@ Provide a helpful, comprehensive response.`;
     ],
   });
 
-  const content = response.content[0];
+  const content = response.content;
   const analysis =
     content.type === "text" ? content.text : "Unable to process query";
 
@@ -626,15 +643,12 @@ Provide a helpful, comprehensive response.`;
  * Main RAG pipeline with agent routing
  */
 export async function processRegulatoryQuery(
-  userQuery: string
+  userQuery: string,
 ): Promise<AgentResponse> {
   logger.info("Processing regulatory query", { query: userQuery });
 
   try {
-    // Step 1: Route query to appropriate agent
     const routing = await routeQuery(userQuery);
-
-    // Step 2: Execute appropriate agent
     let response: AgentResponse;
 
     switch (routing.agent) {
@@ -655,16 +669,17 @@ export async function processRegulatoryQuery(
     logger.info("Query processed successfully", {
       agent: routing.agent,
       sources: response.sources.length,
+      model: MODEL,
+      usingOpenRouter,
     });
 
     return response;
   } catch (error: any) {
     logger.error("Error processing regulatory query", {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
 
-    // Return fallback response on error
     return {
       agent: "General",
       response: `Entschuldigung, ich konnte Ihre Anfrage nicht vollständig verarbeiten.

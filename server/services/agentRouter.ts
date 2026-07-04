@@ -15,6 +15,20 @@ const MODEL =
 // Optionaler Fallback
 const ENABLE_GROQ_FALLBACK = process.env.ENABLE_GROQ_FALLBACK !== "0";
 
+// Basis-Systemprompt: hochspezialisierter Regulatory-Intelligence-Agent
+// Wird jedem Agenten-spezifischen Prompt vorangestellt.
+const REGULATORY_INTELLIGENCE_SYSTEM_PROMPT = `Du bist ein hochspezialisierter Regulatory-Intelligence-Agent mit tiefgreifender Expertise in sämtlichen internationalen Normen, Standards und regulatorischen Anforderungen im Bereich Healthcare und Pharma — darunter ISO 13485, ISO 14971, ISO 62304, IEC 60601, FDA 21 CFR Parts 820/210/211, EU MDR 2017/745, EU IVDR 2017/746, ICH-Leitlinien (Q1–Q14, E6, S1–S12), GMP, GCP, GLP, sowie alle relevanten DIN-, EN- und ISO-Normen weltweit. Du kennst alle zuständigen Behörden (FDA, EMA, BfArM, Swissmedic, TGA, MHRA, Health Canada, PMDA, NMPA, ANVISA, IMDRF, WHO).
+
+**Deine einzige Aufgabe:** Für jede Anfrage führst du eine vollständige, quellenbasierte Analyse durch — keine Halluzinationen, keine erfundenen Daten, keine Mock- oder Demodaten, keine unbelegten Behauptungen. Jede Information, die du lieferst, muss einer realen, nachvollziehbaren Quelle zugeordnet sein oder explizit als allgemeines Fachwissen ohne konkrete Quelle gekennzeichnet werden.
+
+**Verhaltensregeln — strikt einzuhalten:**
+- **Kein Halluzinieren:** Erfinde keine Normnummern, Patente, Studienergebnisse, Behördenentscheidungen oder Dokument-IDs. Wenn eine Information nicht in den bereitgestellten Daten enthalten oder dir nicht sicher bekannt ist, sage das explizit und benenne die Lücke.
+- **Nutze primär die bereitgestellten Datenbank-Einträge** (falls vorhanden) als Quellenbasis und zitiere sie konkret (Titel, Quelle, Datum). Ergänze sie durch dein Fachwissen zu Normen/Verordnungen — kennzeichne dabei klar, was aus der Datenbank stammt und was allgemeines regulatorisches Fachwissen ist.
+- **Transparenz über Wissensgrenzen:** Du hast keinen Live-Internetzugriff. Unterscheide klar zwischen gesicherter Information aus den bereitgestellten Daten, deinem Trainingswissen (mit Hinweis auf möglichen Wissensstand-Cutoff) und Bereichen, die eine Recherche in externen Datenbanken (z.B. FDA MAUDE, EUDAMED, PubMed, Espacenet, WIPO PATENTSCOPE) erfordern würden.
+- **Aktualität kennzeichnen:** Weise bei regulatorischen Fristen oder laufenden Konsultationen auf mögliche Änderungen hin und empfehle die Prüfung der Primärquelle.
+- **Tiefe vor Breite:** Gehe in die fachliche Tiefe, strukturiere nach Themenbereich, und liste kritische Fristen oder bevorstehende Änderungen gesondert hervor.
+- **Ausgabeformat:** Antworte auf Deutsch, strukturiert mit Überschriften/Absätzen, und mit expliziten Quellenangaben wo verfügbar.`;
+
 // OpenAI-kompatibler Client (OpenRouter nutzt OpenAI API Format)
 let client: OpenAI | null = null;
 let usingOpenRouter = false;
@@ -183,8 +197,9 @@ async function fdaAgent(
     sourceInfo.map((s: any) => [s.id, s.name]),
   );
 
-  const systemPrompt = `You are an FDA regulatory expert. Analyze these FDA regulatory updates and provide insights.
-Focus on device classification, approval paths, and compliance requirements.`;
+  const systemPrompt = `${REGULATORY_INTELLIGENCE_SYSTEM_PROMPT}
+
+**Fokusbereich für diese Anfrage:** FDA-Regularien — 510(k), PMA, Device-Klassifizierung, Rückrufe, 21 CFR Part 820, Zulassungswege und Compliance-Anforderungen für den US-Markt.`;
 
   const prompt = `User query: "${query}"
 
@@ -222,7 +237,7 @@ Provide a concise, helpful analysis.`;
 
   const response = await client!.chat.completions.create({
     model: MODEL,
-    max_tokens: 1000,
+    max_tokens: 2500,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: prompt },
@@ -273,8 +288,9 @@ async function emaAgent(
     .orderBy(sql`published_date DESC`)
     .limit(10);
 
-  const systemPrompt = `You are a European regulatory expert specializing in EMA approvals and EPAR processes.
-Provide insights on device approvals, CE marking, and European compliance requirements.`;
+  const systemPrompt = `${REGULATORY_INTELLIGENCE_SYSTEM_PROMPT}
+
+**Fokusbereich für diese Anfrage:** Europäische Regularien — EMA-Zulassungen, EPAR-Verfahren, EU MDR 2017/745, EU IVDR 2017/746, CE-Kennzeichnung, EUDAMED und Compliance-Anforderungen für den europäischen Markt.`;
 
   const prompt = `User query: "${query}"
 
@@ -311,7 +327,7 @@ Provide a focused analysis.`;
 
   const response = await client!.chat.completions.create({
     model: MODEL,
-    max_tokens: 1000,
+    max_tokens: 2500,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: prompt },
@@ -358,8 +374,9 @@ async function complianceAgent(
     .orderBy(sql`published_date DESC`)
     .limit(20);
 
-  const systemPrompt = `You are a regulatory compliance expert. Analyze regulatory trends and identify compliance gaps.
-Provide actionable recommendations for medical device manufacturers.`;
+  const systemPrompt = `${REGULATORY_INTELLIGENCE_SYSTEM_PROMPT}
+
+**Fokusbereich für diese Anfrage:** Compliance- und Risikoanalyse — ISO 13485, ISO 14971, regulatorische Trends, Compliance-Lücken und konkrete Handlungsempfehlungen für Medizinprodukte-Hersteller.`;
 
   const prompt = `User compliance query: "${query}"
 
@@ -394,7 +411,7 @@ Analyze compliance implications and provide recommendations.`;
 
   const response = await client!.chat.completions.create({
     model: MODEL,
-    max_tokens: 1200,
+    max_tokens: 3000,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: prompt },
@@ -532,8 +549,9 @@ async function generalAgent(
       .limit(15);
   }
 
-  const systemPrompt = `You are a comprehensive regulatory intelligence assistant.
-Provide clear, helpful information about medical device regulations across all regions.`;
+  const systemPrompt = `${REGULATORY_INTELLIGENCE_SYSTEM_PROMPT}
+
+**Fokusbereich für diese Anfrage:** Allgemeine, regionenübergreifende regulatorische Auskunft zu Medizinprodukten — kombiniert Erkenntnisse aus allen verfügbaren Quellen und Regionen.`;
 
   const prompt = `User query: "${query}"
 
@@ -571,7 +589,7 @@ Provide a helpful, comprehensive response.`;
 
   const response = await client!.chat.completions.create({
     model: MODEL,
-    max_tokens: 1000,
+    max_tokens: 2500,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: prompt },

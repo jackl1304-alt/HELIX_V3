@@ -299,6 +299,21 @@ interface AgentResponse {
  * Route user query to appropriate agent using LLM
  */
 async function routeQuery(userQuery: string): Promise<RoutingDecision> {
+  // Fast keyword routing (no LLM needed) — covers both English and German
+  const q = userQuery.toLowerCase();
+  if (q.includes("fda") || q.includes("510k") || q.includes("pma")) {
+    return { agent: "fda", confidence: 0.95, reasoning: "Keyword match: FDA terms", parameters: {} };
+  }
+  if (q.includes("ema") || q.includes("eudamed") || q.includes("mdr") || q.includes("ivdr") || q.includes("eugh") || q.includes("ecj") || q.includes("european court") || q.includes("eur-lex")) {
+    return { agent: "ema", confidence: 0.95, reasoning: "Keyword match: EU regulatory terms", parameters: {} };
+  }
+  if (q.includes("canada") || q.includes("health canada")) {
+    return { agent: "health_canada", confidence: 0.95, reasoning: "Keyword match: Canada", parameters: {} };
+  }
+  if (q.includes("compliance") || q.includes("risk") || q.includes("iso") || q.includes("haftung") || q.includes("defekt") || q.includes("produkthaftung") || q.includes("gericht") || q.includes("urteil") || q.includes("recht") || q.includes("rechtlich") || q.includes("vorschrift") || q.includes("verordnung") || q.includes("gesetz") || q.includes("norm") || q.includes("standard") || q.includes("regel") || q.includes("liability") || q.includes("lawsuit") || q.includes("court") || q.includes("case law") || q.includes("enforcement") || q.includes("consent decree") || q.includes("warning letter")) {
+    return { agent: "compliance", confidence: 0.95, reasoning: "Keyword match: Compliance/Legal terms", parameters: {} };
+  }
+
   if (!client) {
     logger.info("Anthropic/OpenRouter client not available");
     return {
@@ -313,10 +328,10 @@ async function routeQuery(userQuery: string): Promise<RoutingDecision> {
 Analyze the user's query and determine which specialized agent should handle it.
 
 Agents available:
-1. "fda" - FDA 510(k), PMA, recalls, device classification
-2. "ema" - European Medical Device Approvals (EPAR), product authorizations
+1. "fda" - FDA 510(k), PMA, recalls, device classification (English queries)
+2. "ema" - European Medical Device Approvals (EPAR), product authorizations (English queries)
 3. "health_canada" - Canadian medical device licenses and approvals
-4. "compliance" - Risk assessment, compliance monitoring, regulatory gaps
+4. "compliance" - Risk assessment, compliance monitoring, regulatory gaps, legal liability, liability law, court rulings, case law, legal cases, product liability, manufacturer liability, German civil law
 5. "analytics" - Financial impact, market trends, ROI analysis
 6. "general" - General regulatory information, multi-source queries
 
@@ -342,13 +357,7 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
 
     if (!completion) {
       logger.warn("LLM unavailable for routing, using keyword fallback");
-      const q = userQuery.toLowerCase();
-      let agent: RoutingDecision["agent"] = "general";
-      if (q.includes("fda") || q.includes("510k") || q.includes("pma")) agent = "fda";
-      else if (q.includes("ema") || q.includes("eudamed") || q.includes("mdr") || q.includes("ivdr")) agent = "ema";
-      else if (q.includes("canada") || q.includes("health canada")) agent = "health_canada";
-      else if (q.includes("compliance") || q.includes("risk") || q.includes("iso")) agent = "compliance";
-      return { agent, confidence: 0.6, reasoning: "LLM unavailable - keyword fallback", parameters: {} };
+      return { agent: "general", confidence: 0.6, reasoning: "LLM unavailable - default to general", parameters: {} };
     }
 
     const { response } = completion;
@@ -362,7 +371,7 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
     logger.info("Query routed", {
       agent: routing.agent,
       confidence: routing.confidence,
-      model: modelUsed,
+      model: completion.modelUsed,
       usingOpenRouter,
     });
 

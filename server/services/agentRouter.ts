@@ -231,7 +231,7 @@ try {
 async function createChatCompletion(params: {
   messages: { role: "system" | "user"; content: string }[];
   max_tokens: number;
-}) {
+}): Promise<{ response: any; modelUsed: string } | null> {
   try {
     const response = await client!.chat.completions.create({
       model: MODEL,
@@ -246,12 +246,19 @@ async function createChatCompletion(params: {
       error: error?.message,
     });
 
-    const response = await client!.chat.completions.create({
-      model: BACKUP_MODEL,
-      max_tokens: params.max_tokens,
-      messages: params.messages,
-    });
-    return { response, modelUsed: BACKUP_MODEL };
+    try {
+      const response = await client!.chat.completions.create({
+        model: BACKUP_MODEL,
+        max_tokens: params.max_tokens,
+        messages: params.messages,
+      });
+      return { response, modelUsed: BACKUP_MODEL };
+    } catch (backupError: any) {
+      logger.error("Backup model also failed", {
+        error: backupError?.message,
+      });
+      return null;
+    }
   }
 }
 
@@ -325,7 +332,7 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
 }`;
 
   try {
-    const { response, modelUsed } = await createChatCompletion({
+    const completion = await createChatCompletion({
       max_tokens: 500,
       messages: [
         { role: "system", content: systemPrompt },
@@ -333,7 +340,19 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
       ],
     });
 
-    let jsonText = (response.choices[0].message.content || "").trim();
+    if (!completion) {
+      logger.warn("LLM unavailable for routing, using keyword fallback");
+      const q = userQuery.toLowerCase();
+      let agent: RoutingDecision["agent"] = "general";
+      if (q.includes("fda") || q.includes("510k") || q.includes("pma")) agent = "fda";
+      else if (q.includes("ema") || q.includes("eudamed") || q.includes("mdr") || q.includes("ivdr")) agent = "ema";
+      else if (q.includes("canada") || q.includes("health canada")) agent = "health_canada";
+      else if (q.includes("compliance") || q.includes("risk") || q.includes("iso")) agent = "compliance";
+      return { agent, confidence: 0.6, reasoning: "LLM unavailable - keyword fallback", parameters: {} };
+    }
+
+    const { response } = completion;
+    let jsonText = (response.choices[0]?.message?.content || "").trim();
     if (jsonText.startsWith("```json")) jsonText = jsonText.slice(7);
     if (jsonText.startsWith("```")) jsonText = jsonText.slice(3);
     if (jsonText.endsWith("```")) jsonText = jsonText.slice(0, -3);
@@ -413,7 +432,7 @@ Provide a concise, helpful analysis.`;
     };
   }
 
-  const { response, modelUsed } = await createChatCompletion({
+  const completion = await createChatCompletion({
     max_tokens: 2500,
     messages: [
       { role: "system", content: systemPrompt },
@@ -421,7 +440,24 @@ Provide a concise, helpful analysis.`;
     ],
   });
 
-  const analysis = response.choices[0].message.content || "Unable to analyze FDA updates";
+  if (!completion) {
+    return {
+      agent: "FDA",
+      response: "Künstliche Intelligenz ist derzeit nicht verfügbar. Verwende die bereitgestellten regulatorischen Updates zur manuellen Recherche.",
+      sources: fdaUpdates.map((row: any) => ({
+        title: row.title,
+        source: sourceMap[row.sourceId] || row.sourceId || "Unknown",
+        date: row.publishedDate?.toISOString() || new Date().toISOString(),
+        relevanceScore: 0.9,
+      })).slice(0, 3),
+      metadata: {
+        totalResultsFound: fdaUpdates.length,
+        processingTimeMs: Date.now() - startTime,
+      },
+    };
+  }
+
+  const analysis = completion.response.choices[0]?.message?.content || "Unable to analyze FDA updates";
 
   return {
     agent: "FDA",
@@ -493,7 +529,7 @@ Provide a focused analysis.`;
     };
   }
 
-  const { response, modelUsed } = await createChatCompletion({
+  const completion = await createChatCompletion({
     max_tokens: 2500,
     messages: [
       { role: "system", content: systemPrompt },
@@ -501,7 +537,24 @@ Provide a focused analysis.`;
     ],
   });
 
-  const analysis = response.choices[0].message.content || "Unable to analyze EMA updates";
+  if (!completion) {
+    return {
+      agent: "EMA",
+      response: "Künstliche Intelligenz ist derzeit nicht verfügbar. Verwende die bereitgestellten regulatorischen Updates zur manuellen Recherche.",
+      sources: emaUpdates.map((row: any) => ({
+        title: row.title,
+        source: sourceMap[row.sourceId] || row.sourceId || "Unknown",
+        date: row.publishedDate?.toISOString() || new Date().toISOString(),
+        relevanceScore: 0.85,
+      })).slice(0, 3),
+      metadata: {
+        totalResultsFound: emaUpdates.length,
+        processingTimeMs: Date.now() - startTime,
+      },
+    };
+  }
+
+  const analysis = completion.response.choices[0]?.message?.content || "Unable to analyze EMA updates";
 
   return {
     agent: "EMA",
@@ -611,7 +664,7 @@ Analyze compliance implications, legal risks, and provide concrete recommendatio
     };
   }
 
-  const { response, modelUsed } = await createChatCompletion({
+  const completion = await createChatCompletion({
     max_tokens: 3000,
     messages: [
       { role: "system", content: systemPrompt },
@@ -619,7 +672,33 @@ Analyze compliance implications, legal risks, and provide concrete recommendatio
     ],
   });
 
-  const analysis = response.choices[0].message.content || "Unable to perform compliance analysis";
+  if (!completion) {
+    const allSources = [
+      ...complianceUpdates.map((u: any) => ({
+        title: u.title,
+        source: sourceMap[u.sourceId] || u.sourceId || "Unknown",
+        date: u.publishedDate?.toISOString() || new Date().toISOString(),
+        relevanceScore: 0.8,
+      })),
+      ...legalResults.map((c: any) => ({
+        title: `${c.title} (${c.caseNumber})`,
+        source: c.court || "Legal Case",
+        date: c.decisionDate?.toISOString() || new Date().toISOString(),
+        relevanceScore: 0.85,
+      })),
+    ];
+    return {
+      agent: "Compliance",
+      response: "Künstliche Intelligenz ist derzeit nicht verfügbar. Verwende die bereitgestellten regulatorischen Updates und Rechtsfälle zur manuellen Recherche.",
+      sources: allSources.slice(0, 3),
+      metadata: {
+        totalResultsFound: complianceUpdates.length + legalResults.length,
+        processingTimeMs: Date.now() - startTime,
+      },
+    };
+  }
+
+  const analysis = completion.response.choices[0]?.message?.content || "Unable to perform compliance analysis";
 
   const allSources = [
     ...complianceUpdates.map((u: any) => ({
@@ -850,7 +929,7 @@ Provide a helpful, comprehensive response.`;
     };
   }
 
-  const { response, modelUsed } = await createChatCompletion({
+  const completion = await createChatCompletion({
     max_tokens: 2500,
     messages: [
       { role: "system", content: systemPrompt },
@@ -858,7 +937,24 @@ Provide a helpful, comprehensive response.`;
     ],
   });
 
-  const analysis = response.choices[0].message.content || "Unable to process query";
+  if (!completion) {
+    return {
+      agent: "General",
+      response: "Künstliche Intelligenz ist derzeit nicht verfügbar. Verwende die bereitgestellten regulatorischen Updates zur manuellen Recherche.",
+      sources: allUpdates.map((u: any) => ({
+        title: u.title,
+        source: u.sourceId || "Unknown",
+        date: u.publishedDate?.toISOString() || new Date().toISOString(),
+        relevanceScore: 0.75,
+      })).slice(0, 3),
+      metadata: {
+        totalResultsFound: allUpdates.length,
+        processingTimeMs: Date.now() - startTime,
+      },
+    };
+  }
+
+  const analysis = completion.response.choices[0]?.message?.content || "Unable to process query";
 
   return {
     agent: "General",

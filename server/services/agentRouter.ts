@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { db } from "../storage";
-import { regulatoryUpdates, dataSources } from "../../shared/schema";
+import { regulatoryUpdates, dataSources, legalCases } from "../../shared/schema";
 import { Logger } from "./logger.service";
 import { sql, inArray, and, or, ilike } from "drizzle-orm";
 import { callGroqChatStreaming } from "./groqService";
@@ -20,6 +20,155 @@ const BACKUP_MODEL =
 
 // Optionaler Fallback
 const ENABLE_GROQ_FALLBACK = process.env.ENABLE_GROQ_FALLBACK !== "0";
+
+/**
+ * Extract search terms from a user query with bilingual support
+ */
+function extractSearchTerms(query: string): string[] {
+  const keywords = query.toLowerCase().match(/[a-zäöüß0-9]{3,}/gi) || [];
+  const stopWords = new Set([
+    "what", "when", "where", "which", "latest", "sind", "über", "neuesten",
+    "gibt", "neues", "oder", "was", "die", "der", "das", "für", "nach",
+    "von", "mit", "und", "the", "are", "for", "from", "with", "how",
+    "does", "can", "will", "should", "would", "could", "have", "has",
+    "ist", "ein", "eine", "einer", "eines", "einem", "einen",
+    "zu", "auf", "an", "in", "bei", "aus", "durch", "um", "bis", "als",
+    "to", "a", "an", "is", "it", "that", "this", "these", "those",
+  ]);
+  const baseTerms = keywords.filter((k) => !stopWords.has(k));
+
+  const translations: Record<string, string[]> = {
+    implantate: ["implant"], implantat: ["implant"],
+    kennzeichnung: ["labeling", "labelling", "identification", "udi"],
+    kennzeichnungen: ["labeling", "labelling", "identification"],
+    nachverfolgbarkeit: ["traceability", "tracking"],
+    anforderungen: ["requirements"], anforderung: ["requirement"],
+    vorschriften: ["requirements", "regulations"], vorschrift: ["regulation"],
+    regulierung: ["regulation"], regulierungen: ["regulations"],
+    zulassung: ["approval", "clearance"], zulassungen: ["approvals"],
+    genehmigung: ["approval"], genehmigungen: ["approvals"],
+    hersteller: ["manufacturer"], risiko: ["risk"], risiken: ["risks"],
+    sicherheit: ["safety", "security"], cybersecurity: ["cybersecurity"],
+    qualitaet: ["quality"], qualität: ["quality"],
+    management: ["management"], klinisch: ["clinical"], klinische: ["clinical"],
+    studie: ["study", "trial"], studien: ["studies", "trials"],
+    verordnung: ["regulation", "directive"], verordnungen: ["regulations", "directives"],
+    richtlinie: ["guideline", "directive"], richtlinien: ["guidelines", "directives"],
+    leitlinie: ["guideline"], leitlinien: ["guidelines"],
+    datenbank: ["database"], datenbanken: ["databases"],
+    system: ["system"], systeme: ["systems"], software: ["software"],
+    ki: ["ai", "artificial intelligence"], künstliche: ["artificial"],
+    intelligenz: ["intelligence"], maschinelles: ["machine"],
+    lernen: ["learning"], algorithmus: ["algorithm"], algorithmen: ["algorithms"],
+    markt: ["market"], märkte: ["markets"], marktzugang: ["market access"],
+    haftung: ["liability"], recht: ["law", "legal"], rechte: ["laws"],
+    rechtsfall: ["case", "legal case"], rechtsfälle: ["cases", "legal cases"],
+    urteil: ["ruling", "judgment"], urteile: ["rulings", "judgments"],
+    warnung: ["warning"], warnungen: ["warnings"],
+    brief: ["letter"], briefe: ["letters"],
+    mängel: ["defects"], mangel: ["defect"],
+    beweise: ["evidence", "proof"], beweis: ["evidence"],
+    beweislast: ["burden of proof"], beweislastumkehr: ["burden of proof reversal"],
+    medizinprodukte: ["medical device", "medical devices"],
+    medizinprodukt: ["medical device"],
+    geräte: ["device", "devices"], gerät: ["device"],
+    prothesen: ["prosthesis", "prosthetic"], prothese: ["prosthesis"],
+    schrauben: ["screw"], platte: ["plate"], nagel: ["nail", "rod"],
+    knochen: ["bone"], beinschrauben: ["screw", "bone", "leg"],
+    knieschrauben: ["screw", "knee"], hüftimplantat: ["implant", "hip"],
+    knieimplantat: ["implant", "knee"],
+    orthopädische: ["orthopedic", "orthopaedic"],
+    orthopaedische: ["orthopedic", "orthopaedic"],
+    orthopadische: ["orthopedic", "orthopaedic"],
+    bein: ["leg"], hüfte: ["hip"], knie: ["knee"],
+  };
+
+  const expanded: string[] = [...baseTerms];
+  baseTerms.forEach((term) => {
+    if (translations[term]) expanded.push(...translations[term]);
+    if (term === "mdr") expanded.push("medical device regulation", "2017/745", "eudamed", "ce marking", "notified body");
+    if (term === "ivdr") expanded.push("in vitro diagnostic", "2017/746", "ivd");
+    if (term === "ud") expanded.push("unique device identification", "udi-di", "udi-pi", "traceability");
+    if (term === "eudamed") expanded.push("european database", "actor registration", "device registration");
+    if (term === "510k") expanded.push("premarket notification", "substantial equivalence", "predicate device");
+    if (term === "pma") expanded.push("premarket approval", "high risk");
+    if (term === "gcp") expanded.push("good clinical practice", "clinical trial");
+    if (term === "gmp") expanded.push("good manufacturing practice", "quality system");
+    if (term === "iso13485") expanded.push("quality management system", "qms");
+    if (term === "iso14971") expanded.push("risk management");
+    if (term === "di") expanded.push("digital health application", "app");
+    if (term === "sam") expanded.push("software as a medical device", "md software");
+    if (term === "aiml") expanded.push("artificial intelligence", "machine learning", "algorithm");
+  });
+
+  return [...new Set(expanded)];
+}
+
+/**
+ * Universal search across regulatory updates (title, description, content)
+ */
+async function searchRegulatoryUpdates(
+  query: string,
+  sourceIds?: string[],
+  limit = 20,
+) {
+  const terms = extractSearchTerms(query);
+
+  let updates: any[] = [];
+  if (terms.length > 0) {
+    const conditions = terms.map((term) =>
+      or(
+        ilike(regulatoryUpdates.title, `%${term}%`),
+        ilike(regulatoryUpdates.description, `%${term}%`),
+        ilike(regulatoryUpdates.content, `%${term}%`),
+      ),
+    );
+
+    let whereClause = or(...conditions);
+    if (sourceIds && sourceIds.length > 0) {
+      whereClause = and(whereClause, inArray(regulatoryUpdates.sourceId, sourceIds));
+    }
+
+    updates = await db
+      .select({
+        id: regulatoryUpdates.id,
+        title: regulatoryUpdates.title,
+        description: regulatoryUpdates.description,
+        content: regulatoryUpdates.content,
+        sourceId: regulatoryUpdates.sourceId,
+        publishedDate: regulatoryUpdates.publishedDate,
+      })
+      .from(regulatoryUpdates)
+      .where(whereClause)
+      .orderBy(sql`published_date DESC`)
+      .limit(limit);
+  }
+
+  if (updates.length === 0) {
+    updates = await db
+      .select({
+        id: regulatoryUpdates.id,
+        title: regulatoryUpdates.title,
+        description: regulatoryUpdates.description,
+        content: regulatoryUpdates.content,
+        sourceId: regulatoryUpdates.sourceId,
+        publishedDate: regulatoryUpdates.publishedDate,
+      })
+      .from(regulatoryUpdates)
+      .orderBy(sql`published_date DESC`)
+      .limit(15);
+  }
+
+  const ids = updates.map((u) => u.sourceId).filter(Boolean);
+  const sourceInfo =
+    ids.length > 0
+      ? await db.select().from(dataSources).where(inArray(dataSources.id, ids as string[]))
+      : [];
+
+  const sourceMap = Object.fromEntries(sourceInfo.map((s: any) => [s.id, s.name]));
+
+  return { updates, sourceMap, terms };
+}
 
 // Basis-Systemprompt: hochspezialisierter Regulatory-Intelligence-Agent
 // Wird jedem Agenten-spezifischen Prompt vorangestellt.
@@ -220,32 +369,10 @@ async function fdaAgent(
 ): Promise<AgentResponse> {
   const startTime = Date.now();
 
-  const fdaUpdates = await db
-    .select({
-      id: regulatoryUpdates.id,
-      title: regulatoryUpdates.title,
-      description: regulatoryUpdates.description,
-      sourceId: regulatoryUpdates.sourceId,
-      publishedDate: regulatoryUpdates.publishedDate,
-    })
-    .from(regulatoryUpdates)
-    .where(
-      sql`LOWER(title) LIKE LOWER(${`%${query}%`}) OR LOWER(description) LIKE LOWER(${`%${query}%`})`,
-    )
-    .orderBy(sql`published_date DESC`)
-    .limit(10);
-
-  const sourceIds = fdaUpdates.map((u) => u.sourceId).filter(Boolean);
-  const sourceInfo =
-    sourceIds.length > 0
-      ? await db
-          .select()
-          .from(dataSources)
-          .where(inArray(dataSources.id, sourceIds as string[]))
-      : [];
-
-  const sourceMap = Object.fromEntries(
-    sourceInfo.map((s: any) => [s.id, s.name]),
+  const { updates: fdaUpdates, sourceMap } = await searchRegulatoryUpdates(
+    query,
+    ['fda_510k', 'fda_pma'],
+    10,
   );
 
   const systemPrompt = `${REGULATORY_INTELLIGENCE_SYSTEM_PROMPT}
@@ -323,20 +450,11 @@ async function emaAgent(
 ): Promise<AgentResponse> {
   const startTime = Date.now();
 
-  const emaUpdates = await db
-    .select({
-      id: regulatoryUpdates.id,
-      title: regulatoryUpdates.title,
-      description: regulatoryUpdates.description,
-      sourceId: regulatoryUpdates.sourceId,
-      publishedDate: regulatoryUpdates.publishedDate,
-    })
-    .from(regulatoryUpdates)
-    .where(
-      sql`LOWER(title) LIKE LOWER(${`%${query}%`}) OR LOWER(description) LIKE LOWER(${`%${query}%`})`,
-    )
-    .orderBy(sql`published_date DESC`)
-    .limit(10);
+  const { updates: emaUpdates, sourceMap } = await searchRegulatoryUpdates(
+    query,
+    ['ema_epar', 'eudamed', 'mdr_2017_745', 'ivdr_2017_746', 'ich_e6', 'mhra', 'bfarm', 'swissmedic', 'tga', 'health_canada'],
+    10,
+  );
 
   const systemPrompt = `${REGULATORY_INTELLIGENCE_SYSTEM_PROMPT}
 
@@ -412,47 +530,82 @@ async function complianceAgent(
 ): Promise<AgentResponse> {
   const startTime = Date.now();
 
-  const allUpdates = await db
-    .select({
-      id: regulatoryUpdates.id,
-      title: regulatoryUpdates.title,
-      sourceId: regulatoryUpdates.sourceId,
-      publishedDate: regulatoryUpdates.publishedDate,
-    })
-    .from(regulatoryUpdates)
-    .orderBy(sql`published_date DESC`)
-    .limit(20);
+  const { updates: complianceUpdates, sourceMap } = await searchRegulatoryUpdates(
+    query,
+    undefined,
+    15,
+  );
+
+  // Also search legal cases for liability/risk-related queries
+  const legalTerms = extractSearchTerms(query);
+  let legalResults: any[] = [];
+  if (legalTerms.length > 0) {
+    const legalConditions = legalTerms.map((term) =>
+      or(
+        ilike(legalCases.title, `%${term}%`),
+        ilike(legalCases.summary, `%${term}%`),
+        ilike(legalCases.content, `%${term}%`),
+      ),
+    );
+    legalResults = await db
+      .select({
+        id: legalCases.id,
+        title: legalCases.title,
+        caseNumber: legalCases.caseNumber,
+        court: legalCases.court,
+        jurisdiction: legalCases.jurisdiction,
+        decisionDate: legalCases.decisionDate,
+        verdict: legalCases.verdict,
+      })
+      .from(legalCases)
+      .where(or(...legalConditions))
+      .orderBy(sql`decision_date DESC`)
+      .limit(5);
+  }
 
   const systemPrompt = `${REGULATORY_INTELLIGENCE_SYSTEM_PROMPT}
 
-**Fokusbereich für diese Anfrage:** Compliance- und Risikoanalyse — ISO 13485, ISO 14971, regulatorische Trends, Compliance-Lücken und konkrete Handlungsempfehlungen für Medizinprodukte-Hersteller.`;
+**Fokusbereich für diese Anfrage:** Compliance- und Risikoanalyse — ISO 13485, ISO 14971, regulatorische Trends, Compliance-Lücken, Haftungsfragen und konkrete Handlungsempfehlungen für Medizinprodukte-Hersteller.`;
 
   const prompt = `User compliance query: "${query}"
 
-Recent regulatory updates (last 20):
-${allUpdates
-  .map((u: any) => `- ${u.title} (Source: ${u.sourceId}) - ${u.publishedDate}`)
+Regulatory updates found (${complianceUpdates.length}):
+${complianceUpdates
+  .map((u: any) => `- ${u.title} (${sourceMap[u.sourceId] || u.sourceId || "Unknown"})`)
   .join("\n")}
 
-Analyze compliance implications and provide recommendations.`;
+Legal cases found (${legalResults.length}):
+${legalResults
+  .map((c: any) => `- ${c.title} (${c.court}, ${c.jurisdiction}) — ${c.verdict}`)
+  .join("\n")}
+
+Analyze compliance implications, legal risks, and provide concrete recommendations.`;
 
   if (!client && ENABLE_GROQ_FALLBACK) {
     logger.info("Compliance Agent: Using Groq fallback");
     const analysis = await callGroqChatStreaming(prompt, systemPrompt);
 
+    const allSources = [
+      ...complianceUpdates.map((u: any) => ({
+        title: u.title,
+        source: sourceMap[u.sourceId] || u.sourceId || "Unknown",
+        date: u.publishedDate?.toISOString() || new Date().toISOString(),
+        relevanceScore: 0.8,
+      })),
+      ...legalResults.map((c: any) => ({
+        title: `${c.title} (${c.caseNumber})`,
+        source: c.court || "Legal Case",
+        date: c.decisionDate?.toISOString() || new Date().toISOString(),
+        relevanceScore: 0.85,
+      })),
+    ];
+
     return {
       agent: "Compliance",
       response: analysis,
-      sources: allUpdates
-        .map((u: any) => ({
-          title: u.title,
-          source: u.sourceId || "Unknown",
-          date: u.publishedDate?.toISOString() || new Date().toISOString(),
-          relevanceScore: 0.75,
-        }))
-        .slice(0, 3),
+      sources: allSources.slice(0, 3),
       metadata: {
-        totalResultsFound: allUpdates.length,
+        totalResultsFound: complianceUpdates.length + legalResults.length,
         processingTimeMs: Date.now() - startTime,
       },
     };
@@ -468,19 +621,27 @@ Analyze compliance implications and provide recommendations.`;
 
   const analysis = response.choices[0].message.content || "Unable to perform compliance analysis";
 
+  const allSources = [
+    ...complianceUpdates.map((u: any) => ({
+      title: u.title,
+      source: sourceMap[u.sourceId] || u.sourceId || "Unknown",
+      date: u.publishedDate?.toISOString() || new Date().toISOString(),
+      relevanceScore: 0.8,
+    })),
+    ...legalResults.map((c: any) => ({
+      title: `${c.title} (${c.caseNumber})`,
+      source: c.court || "Legal Case",
+      date: c.decisionDate?.toISOString() || new Date().toISOString(),
+      relevanceScore: 0.85,
+    })),
+  ];
+
   return {
     agent: "Compliance",
     response: analysis,
-    sources: allUpdates
-      .map((u: any) => ({
-        title: u.title,
-        source: u.sourceId || "Unknown",
-        date: u.publishedDate?.toISOString() || new Date().toISOString(),
-        relevanceScore: 0.8,
-      }))
-      .slice(0, 3),
+    sources: allSources.slice(0, 3),
     metadata: {
-      totalResultsFound: allUpdates.length,
+      totalResultsFound: complianceUpdates.length + legalResults.length,
       processingTimeMs: Date.now() - startTime,
     },
   };
@@ -495,23 +656,17 @@ async function generalAgent(
 ): Promise<AgentResponse> {
   const startTime = Date.now();
 
-  const keywords = query.toLowerCase().match(/[a-zäöüß]{4,}/gi) || [];
-  const searchTerms = keywords.filter(
-    (k) =>
-      ![
-        "what",
-        "when",
-        "where",
-        "which",
-        "latest",
-        "sind",
-        "über",
-        "neuesten",
-        "gibt",
-        "neues",
-        "oder",
-      ].includes(k),
-  );
+  // Extract keywords: accept 3+ chars (important acronyms like UDI, MDR, FDA, EMA)
+  const keywords = query.toLowerCase().match(/[a-zäöüß0-9]{3,}/gi) || [];
+  const stopWords = new Set([
+    "what", "when", "where", "which", "latest", "sind", "über", "neuesten",
+    "gibt", "neues", "oder", "was", "die", "der", "das", "für", "nach",
+    "von", "mit", "und", "the", "are", "for", "from", "with", "how",
+    "does", "can", "will", "should", "would", "could", "have", "has",
+    "ist", "sind", "ein", "eine", "einer", "eines", "einem", "einen",
+    "zu", "auf", "an", "in", "bei", "aus", "durch", "um", "bis", "als",
+  ]);
+  const searchTerms = keywords.filter((k) => !stopWords.has(k));
 
   const translations: Record<string, string[]> = {
     beinschrauben: ["screw", "bone", "orthopedic", "leg"],
@@ -519,11 +674,78 @@ async function generalAgent(
     hüftimplantat: ["implant", "hip", "orthopedic"],
     knieimplantat: ["implant", "knee", "orthopedic"],
     orthopädische: ["orthopedic", "orthopaedic"],
+    orthopaedische: ["orthopedic", "orthopaedic"],
+    orthopadische: ["orthopedic", "orthopaedic"],
     implantate: ["implant"],
+    implantat: ["implant"],
     schrauben: ["screw"],
     platte: ["plate"],
     nagel: ["nail", "rod"],
     knochen: ["bone"],
+    anforderungen: ["requirements", "requirement"],
+    anforderung: ["requirement"],
+    vorschriften: ["requirements", "regulations", "regulation"],
+    vorschrift: ["regulation"],
+    regulierung: ["regulation", "regulatory"],
+    regulierungen: ["regulations"],
+    genehmigung: ["approval", "clearance"],
+    genehmigungen: ["approvals", "clearances"],
+    zulassung: ["approval", "clearance", "licensing"],
+    zulassungen: ["approvals", "licenses"],
+    hersteller: ["manufacturer"],
+    risiko: ["risk"],
+    risiken: ["risks"],
+    sicherheit: ["safety", "security"],
+    cybersecurity: ["cybersecurity"],
+    cyber: ["cyber"],
+    kennzeichnung: ["labeling", "labelling", "identification"],
+    kennzeichnungen: ["labeling", "labelling"],
+    nachverfolgbarkeit: ["traceability", "tracking"],
+    qualitaet: ["quality"],
+    qualität: ["quality"],
+    management: ["management"],
+    klinisch: ["clinical"],
+    klinische: ["clinical"],
+    studie: ["study", "trial"],
+    studien: ["studies", "trials"],
+    verordnung: ["regulation", "directive"],
+    verordnungen: ["regulations", "directives"],
+    richtlinie: ["guideline", "directive"],
+    richtlinien: ["guidelines", "directives"],
+    leitlinie: ["guideline"],
+    leitlinien: ["guidelines"],
+    datenbank: ["database"],
+    datenbanken: ["databases"],
+    system: ["system"],
+    systeme: ["systems"],
+    software: ["software"],
+    ki: ["ai", "artificial intelligence"],
+    künstliche: ["artificial"],
+    intelligenz: ["intelligence"],
+    maschinelles: ["machine"],
+    lernen: ["learning"],
+    algorithmus: ["algorithm"],
+    algorithmen: ["algorithms"],
+    markt: ["market"],
+    märkte: ["markets"],
+    marktzugang: ["market access"],
+    haftung: ["liability"],
+    recht: ["law", "legal"],
+    rechte: ["laws", "rights"],
+    rechtsfall: ["case", "legal case"],
+    rechtsfälle: ["cases", "legal cases"],
+    urteil: ["ruling", "judgment"],
+    urteile: ["rulings", "judgments"],
+    warnung: ["warning"],
+    warnungen: ["warnings"],
+    brief: ["letter"],
+    briefe: ["letters"],
+    mängel: ["defects", "defect"],
+    mangel: ["defect"],
+    beweise: ["evidence", "proof"],
+    beweis: ["evidence"],
+    beweislast: ["burden of proof"],
+    beweislastumkehr: ["burden of proof reversal"],
   };
 
   const expandedTerms: string[] = [...searchTerms];
@@ -533,6 +755,19 @@ async function generalAgent(
     if (term.includes("implantat")) expandedTerms.push("implant");
     if (term.includes("platte")) expandedTerms.push("plate");
     if (term.includes("nagel")) expandedTerms.push("nail", "rod");
+    if (term === "mdr") expandedTerms.push("medical device regulation", "2017/745");
+    if (term === "ivdr") expandedTerms.push("in vitro diagnostic", "2017/746");
+    if (term === "ud") expandedTerms.push("unique device identification");
+    if (term === "eudamed") expandedTerms.push("european database");
+    if (term === "510k") expandedTerms.push("premarket notification", "substantial equivalence");
+    if (term === "pma") expandedTerms.push("premarket approval");
+    if (term === "gcp") expandedTerms.push("good clinical practice");
+    if (term === "gmp") expandedTerms.push("good manufacturing practice");
+    if (term === "iso13485") expandedTerms.push("quality management");
+    if (term === "iso14971") expandedTerms.push("risk management");
+    if (term === "di") expandedTerms.push("digital health application");
+    if (term === "sam") expandedTerms.push("software as a medical device");
+    if (term === "aiml") expandedTerms.push("artificial intelligence", "machine learning");
   });
 
   let allUpdates: any[] = [];
@@ -541,46 +776,26 @@ async function generalAgent(
       or(
         ilike(regulatoryUpdates.title, `%${term}%`),
         ilike(regulatoryUpdates.description, `%${term}%`),
+        ilike(regulatoryUpdates.content, `%${term}%`),
       ),
     );
 
     const keywordFilter = or(...keywordConditions);
-    const deviceSources = [
-      "fda_510k",
-      "fda_pma",
-      "health_canada_mdall",
-      "ema_epar",
-    ];
 
+    // Single broad search across all data sources (no restrictive whitelist)
     allUpdates = await db
       .select({
         id: regulatoryUpdates.id,
         title: regulatoryUpdates.title,
         description: regulatoryUpdates.description,
+        content: regulatoryUpdates.content,
         sourceId: regulatoryUpdates.sourceId,
         publishedDate: regulatoryUpdates.publishedDate,
       })
       .from(regulatoryUpdates)
-      .where(
-        and(keywordFilter, inArray(regulatoryUpdates.sourceId, deviceSources)),
-      )
+      .where(keywordFilter)
       .orderBy(sql`published_date DESC`)
       .limit(30);
-
-    if (allUpdates.length === 0) {
-      allUpdates = await db
-        .select({
-          id: regulatoryUpdates.id,
-          title: regulatoryUpdates.title,
-          description: regulatoryUpdates.description,
-          sourceId: regulatoryUpdates.sourceId,
-          publishedDate: regulatoryUpdates.publishedDate,
-        })
-        .from(regulatoryUpdates)
-        .where(keywordFilter)
-        .orderBy(sql`published_date DESC`)
-        .limit(30);
-    }
   }
 
   if (allUpdates.length === 0) {

@@ -20,6 +20,7 @@ import {
   insertCostItemSchema,
   insertNormativeActionSchema
 } from '../shared/schema.js';
+import { liveDataSourcesService } from './services/liveDataSourcesService.js';
 
 // optimizedSyncService entfernt - keine Mock-Daten mehr
 
@@ -1246,6 +1247,36 @@ export function registerRoutes(app: Express) {
         message: error.message,
         stack: error.stack
       });
+    }
+  });
+
+  // ====== LIVE DATA SOURCE INITIALIZATION & SYNC ======
+
+  /**
+   * Initialize live data sources in database
+   */
+  app.post('/api/live-data/init', async (req, res) => {
+    try {
+      await liveDataSourcesService.initializeLiveDataSources();
+      res.json({ success: true, message: 'Live data sources initialized' });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  /**
+   * Sync all live data sources (real web scraping)
+   */
+  app.post('/api/live-data/sync', async (req, res) => {
+    try {
+      res.status(202).json({ success: true, message: 'Live data sync started' });
+
+      setImmediate(async () => {
+        const result = await liveDataSourcesService.syncAllLiveSources();
+        console.log('[LiveData] Sync complete:', result);
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 }

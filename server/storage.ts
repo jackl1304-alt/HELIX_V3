@@ -163,6 +163,26 @@ class MorningStorage implements IStorage {
       const [dataSourceCount] = await sql`SELECT COUNT(*)::int AS count FROM data_sources WHERE is_active = true`;
       const [patentCount] = await sql`SELECT COUNT(*)::int AS count FROM patents`;
 
+      // Calculate data quality score based on actual content presence
+      const [contentFilled] = await sql`
+        SELECT COUNT(*)::int AS count FROM regulatory_updates
+        WHERE content IS NOT NULL AND LENGTH(TRIM(content)) > 100
+      `;
+      const contentRate = regCount?.count > 0
+        ? Math.round((contentFilled?.count || 0) / regCount.count * 100)
+        : 0;
+
+      let dataQuality: string;
+      if (regCount?.count >= 10 && contentRate >= 80 && legalCount?.count >= 2 && dataSourceCount?.count >= 5) {
+        dataQuality = `HIGH (${contentRate}% content)`;
+      } else if (regCount?.count >= 5 && contentRate >= 50 && dataSourceCount?.count >= 3) {
+        dataQuality = `MEDIUM (${contentRate}% content)`;
+      } else if (regCount?.count > 0) {
+        dataQuality = `LOW (${contentRate}% content)`;
+      } else {
+        dataQuality = 'NO DATA';
+      }
+
       const stats = {
         totalUpdates: regCount?.count || 0,
         uniqueUpdates: regCount?.count || 0,
@@ -175,7 +195,7 @@ class MorningStorage implements IStorage {
         currentData: regCount?.count || 0,
         archivedData: 0,
         duplicatesRemoved: 'N/A',
-        dataQuality: 'UNKNOWN',
+        dataQuality,
         totalArticles: 0,
         totalSubscribers: 0,
         totalNewsletters: 0,

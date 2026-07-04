@@ -250,14 +250,14 @@ export default function RegulatoryUpdates() {
                             </Badge>
                           )}
                         </div>
-                        <CardDescription className="text-base mb-3">
+                        <div className="text-base text-gray-600 dark:text-gray-400 mb-3">
                           {update.fda_applicant && (
-                            <div className="text-sm text-gray-600 mb-1">
+                            <span className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                               K-Nummer: {update.fda_k_number} Antragsteller: {update.fda_applicant} Produktcode: {update.fda_product_code} Geräteklasse: {update.fda_device_class} Regulierungsnummer: {update.fda_regulation_number} Entscheidungsdatum: {update.fda_decision_date ? new Date(update.fda_decision_date).toLocaleDateString('de-DE', {year: 'numeric', month: '2-digit', day: '2-digit'}) : 'N/A'} Zusammenfassung: {update.description}
-                            </div>
+                            </span>
                           )}
                           {!update.fda_applicant && update.description}
-                        </CardDescription>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
                         {update.published_date && (

@@ -39,8 +39,12 @@ export function getDatabaseConnection() {
 }
 
 function createMockSQL() {
-  // Keine Mock-Daten mehr - Fehler werfen
-  throw new Error('Database connection not available. DATABASE_URL must be set.');
+  // Graceful fallback when no database is available
+  console.warn('[DB] Using mock SQL - database features disabled');
+  return async () => {
+    console.warn('[DB] Database operation attempted but no connection available');
+    return [];
+  };
 }
 
 // SQL Template Helper - verwendet jetzt pool aus db.ts

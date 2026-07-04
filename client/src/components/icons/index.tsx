@@ -95,6 +95,7 @@ export const Share2 = make('share');
 export const Mail = make('mail');
 export const Send = make('send');
 export const Trash = make('trash');
+export const Patent = make('file-check');
 export const Building2 = make('building-2');
 export const Building = make('building');
 export const User = make('user');

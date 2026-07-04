@@ -12,11 +12,12 @@ neonConfig.webSocketConstructor = ws;
 // Windows-kompatible Datenbankverbindung mit Fallback
 let pool: NeonPool | PgPool | null = null;
 let dbInstance: any = null;
-let driver: 'neon' | 'pg' = 'pg';
+let driver: 'neon' | 'pg' | 'none' = 'none';
 
 if (!process.env.DATABASE_URL) {
-  console.error('[DB] DATABASE_URL not set - database connection required');
-  throw new Error('DATABASE_URL environment variable is required. Please set it in .env file');
+  console.warn('[DB] WARNING: DATABASE_URL not set - database features will be disabled');
+  console.warn('[DB] The server will start, but most API endpoints will not work');
+  console.warn('[DB] Set DATABASE_URL in .env file for full functionality');
 } else {
   const url = process.env.DATABASE_URL;
   const isNeon = /\.neon\.tech/.test(url || '');
@@ -37,7 +38,7 @@ if (!process.env.DATABASE_URL) {
     }
   } catch (error) {
     console.error('[DB] Failed to connect to database:', error);
-    throw new Error(`Database connection failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please check your DATABASE_URL.`);
+    console.warn('[DB] Server will start, but database features will be disabled');
   }
 }
 

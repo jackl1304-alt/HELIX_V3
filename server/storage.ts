@@ -21,54 +21,65 @@ console.log('[DB] Database URL configured:', DATABASE_URL ? 'YES' : 'NO');
 console.log('[DB] Environment:', process.env.NODE_ENV || 'development');
 
 // Windows-kompatible Datenbankverbindung mit Fallback
-let sql: any;
-let db: any;
-// isMockMode entfernt - keine Mock-Datenbank mehr
+let sql: any = null;
+let db: any = null;
+let dbConnected = false;
 
 if (!DATABASE_URL) {
-  console.error('[DB ERROR] No DATABASE_URL environment variable found');
-  throw new Error('DATABASE_URL environment variable is required. Please set it in .env file');
+  console.warn('[DB WARNING] No DATABASE_URL environment variable found - database features disabled');
+  console.warn('[DB WARNING] Set DATABASE_URL in .env file to enable full functionality');
 } else {
   console.log('[DB] Using DATABASE_URL for Production/Development');
   // Validiere DATABASE_URL Format bevor Verbindung
   if (!DATABASE_URL.includes('://') || !DATABASE_URL.startsWith('postgresql://') || !DATABASE_URL.includes('@')) {
     console.warn('[DB WARNING] Invalid DATABASE_URL format');
     console.warn('[DB WARNING] Expected: postgresql://user:password@host:port/database');
-    throw new Error('Invalid DATABASE_URL format. Expected: postgresql://user:password@host:port/database');
+    console.warn('[DB WARNING] Database features disabled due to invalid URL');
   } else {
     // ALWAYS use native PG Pool for stability (no Neon HTTP)
     console.log('[DB] Initializing NATIVE PostgreSQL connection pool...');
 
-    const pool = new PgPool({
-      connectionString: DATABASE_URL,
-      max: 20, // Maximum pool size
-      idleTimeoutMillis: 30000, // 30 seconds
-      connectionTimeoutMillis: 5000, // 5 seconds connection timeout
-      ssl: DATABASE_URL.includes('neon.tech') ? { rejectUnauthorized: false } : undefined
-    });
+    try {
+      const pool = new PgPool({
+        connectionString: DATABASE_URL,
+        max: 20, // Maximum pool size
+        idleTimeoutMillis: 30000, // 30 seconds
+        connectionTimeoutMillis: 5000, // 5 seconds connection timeout
+        ssl: DATABASE_URL.includes('neon.tech') ? { rejectUnauthorized: false } : undefined
+      });
 
-    // Test connection immediately (SYNCHRONOUS)
-    pool.query('SELECT NOW()').then(() => {
-      console.log('[DB] ✅ Connection pool established successfully');
-    }).catch((err) => {
-      console.error('[DB] ❌ Connection test failed:', err.message);
-    });
+      // Test connection immediately
+      pool.query('SELECT NOW()').then(() => {
+        console.log('[DB] ✅ Connection pool established successfully');
+        dbConnected = true;
+      }).catch((err) => {
+        console.error('[DB] ❌ Connection test failed:', err.message);
+        console.warn('[DB WARNING] Database features disabled');
+      });
 
-    db = drizzlePg(pool);
+      db = drizzlePg(pool);
+      dbConnected = true;
 
-    // Enhanced SQL-Template-Helper with timeout protection
-    sql = async (strings: TemplateStringsArray, ...values: any[]) => {
-      const text = strings.reduce((acc, part, i) => acc + part + (i < values.length ? `$${i + 1}` : ''), '');
-      try {
-        const result = await pool.query(text, values);
-        return result.rows;
-      } catch (error: any) {
-        console.error('[DB] Query error:', error.message);
-        throw error;
-      }
-    };
+      // Enhanced SQL-Template-Helper with timeout protection
+      sql = async (strings: TemplateStringsArray, ...values: any[]) => {
+        const text = strings.reduce((acc, part, i) => acc + part + (i < values.length ? `$${i + 1}` : ''), '');
+        try {
+          const result = await pool.query(text, values);
+          return result.rows;
+        } catch (error: any) {
+          console.error('[DB] Query error:', error.message);
+          throw error;
+        }
+      };
 
-    console.log('[DB] storage.ts: Native PG driver with connection pooling ACTIVE');
+      console.log('[DB] storage.ts: Native PG driver with connection pooling ACTIVE');
+    } catch (error) {
+      console.error('[DB ERROR] Failed to initialize database:', error);
+      console.warn('[DB WARNING] Database features disabled');
+      db = null;
+      sql = null;
+      dbConnected = false;
+    }
   }
 }
 

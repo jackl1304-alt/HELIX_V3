@@ -10,7 +10,13 @@ const logger = new Logger("AgentRouter");
 // Zentrales Modell: per Replit Secret/Env überschreibbar
 const MODEL =
   process.env.OPENROUTER_MODEL ||
-  "anthropic/claude-3.5-haiku";
+  "poolside/laguna-m.1:free";
+
+// Backup-Modell: wird automatisch genutzt, wenn das primäre Modell fehlschlägt
+// (z.B. Rate-Limit bei kostenlosen Modellen)
+const BACKUP_MODEL =
+  process.env.OPENROUTER_BACKUP_MODEL ||
+  "nvidia/nemotron-3-ultra-550b-a55b:free";
 
 // Optionaler Fallback
 const ENABLE_GROQ_FALLBACK = process.env.ENABLE_GROQ_FALLBACK !== "0";
@@ -52,6 +58,38 @@ try {
   }
 } catch (error: any) {
   logger.warn("Failed to initialize OpenRouter client", { error: error?.message });
+}
+
+/**
+ * Führt einen Chat-Completion-Aufruf aus. Bei Fehler (z.B. Rate-Limit des
+ * primären kostenlosen Modells) wird automatisch auf das Backup-Modell
+ * umgeschaltet.
+ */
+async function createChatCompletion(params: {
+  messages: { role: "system" | "user"; content: string }[];
+  max_tokens: number;
+}) {
+  try {
+    const response = await client!.chat.completions.create({
+      model: MODEL,
+      max_tokens: params.max_tokens,
+      messages: params.messages,
+    });
+    return { response, modelUsed: MODEL };
+  } catch (error: any) {
+    logger.warn("Primary model failed, trying backup model", {
+      primaryModel: MODEL,
+      backupModel: BACKUP_MODEL,
+      error: error?.message,
+    });
+
+    const response = await client!.chat.completions.create({
+      model: BACKUP_MODEL,
+      max_tokens: params.max_tokens,
+      messages: params.messages,
+    });
+    return { response, modelUsed: BACKUP_MODEL };
+  }
 }
 
 /**
@@ -124,8 +162,7 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
 }`;
 
   try {
-    const response = await client.chat.completions.create({
-      model: MODEL,
+    const { response, modelUsed } = await createChatCompletion({
       max_tokens: 500,
       messages: [
         { role: "system", content: systemPrompt },
@@ -143,7 +180,7 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
     logger.info("Query routed", {
       agent: routing.agent,
       confidence: routing.confidence,
-      model: MODEL,
+      model: modelUsed,
       usingOpenRouter,
     });
 
@@ -235,8 +272,7 @@ Provide a concise, helpful analysis.`;
     };
   }
 
-  const response = await client!.chat.completions.create({
-    model: MODEL,
+  const { response, modelUsed } = await createChatCompletion({
     max_tokens: 2500,
     messages: [
       { role: "system", content: systemPrompt },
@@ -325,8 +361,7 @@ Provide a focused analysis.`;
     };
   }
 
-  const response = await client!.chat.completions.create({
-    model: MODEL,
+  const { response, modelUsed } = await createChatCompletion({
     max_tokens: 2500,
     messages: [
       { role: "system", content: systemPrompt },
@@ -409,8 +444,7 @@ Analyze compliance implications and provide recommendations.`;
     };
   }
 
-  const response = await client!.chat.completions.create({
-    model: MODEL,
+  const { response, modelUsed } = await createChatCompletion({
     max_tokens: 3000,
     messages: [
       { role: "system", content: systemPrompt },
@@ -587,8 +621,7 @@ Provide a helpful, comprehensive response.`;
     };
   }
 
-  const response = await client!.chat.completions.create({
-    model: MODEL,
+  const { response, modelUsed } = await createChatCompletion({
     max_tokens: 2500,
     messages: [
       { role: "system", content: systemPrompt },

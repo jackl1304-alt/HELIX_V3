@@ -7,6 +7,7 @@ import { storage } from '../storage.js';
 import { universalScraper } from './universal-scraper.js';
 import { professionalFormatter } from './professional-formatter.js';
 import { regulatoryUpdates } from '../../shared/schema.js';
+import { legalCaseCollector } from './legalCaseCollector.js';
 import { eq } from 'drizzle-orm';
 
 interface SyncResult {
@@ -205,6 +206,32 @@ export class DataCollectionOrchestrator {
    */
   async syncSourcesByType(type: string, maxResults: number = 50): Promise<SyncReport> {
     console.log(`[Orchestrator] Starting sync for source type: ${type}`);
+
+    // Legal cases (Rechtsprechung) have a dedicated collector that writes directly
+    // to the legal_cases table — let it run instead of the regulatory scraper.
+    if (type === 'legal' || type === 'rechtsprechung') {
+      const startMs = Date.now();
+      const res = await legalCaseCollector.collectAllLegalCases();
+      return {
+        started_at: new Date(startMs),
+        completed_at: new Date(),
+        total_sources: 7,
+        successful_sources: Math.max(0, 7 - res.errors.length),
+        failed_sources: res.errors.length,
+        total_updates_found: res.totalCollected,
+        total_updates_inserted: res.totalStored,
+        results: [
+          {
+            source_id: 'legal_aggregator',
+            source_name: 'Global Legal Collectors (FDA + EU CELEX)',
+            updates_found: res.totalCollected,
+            updates_inserted: res.totalStored,
+            errors: res.errors,
+            duration_ms: Date.now() - startMs,
+          },
+        ],
+      };
+    }
 
     const sources = await storage.getDataSources();
     const filteredSources = sources.filter((s: any) => s.type === type && s.status === 'active');

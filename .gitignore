@@ -67,3 +67,6 @@ restore-db.sql
 
 # Agent state files
 .agent_state_*.bin
+
+# Temp extraction from master_sources docx
+tmp_master_sources.txt

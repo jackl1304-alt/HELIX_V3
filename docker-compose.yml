@@ -42,8 +42,10 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backups:/backups
-    ports:
-      - "5432:5432"
+    # Postgres is reachable ONLY via the helix-network (cluster-internal).
+    # We deliberately do not publish 5432 to the host — this avoids public exposure
+    # even if the Netcup firewall is misconfigured.
+    # To debug from the host: `docker compose exec postgres psql ...`
     restart: unless-stopped
     networks:
       - helix-network
@@ -56,8 +58,9 @@ services:
   # Redis for Caching
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    # Redis is reachable ONLY via the helix-network (cluster-internal).
+    # 6379 is intentionally NOT published to the host. No tooling should ever
+    # reach Redis from outside the docker-compose stack.
     volumes:
       - redis_data:/data
     restart: unless-stopped

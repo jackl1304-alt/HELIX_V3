@@ -20,6 +20,7 @@ import {
   Target,
   RefreshCw
 } from "@/components/icons";
+import { fmtDate } from "@/lib/date";
 
 // Mock tenant ID
 const mockTenantId = "030d3e01-32c4-4f95-8d54-98be948e8d4b";
@@ -250,7 +251,7 @@ export default function CustomerAIInsights() {
                   <div className="flex items-center justify-between pt-2">
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <Clock className="h-3 w-3" />
-                      {new Date(insight.createdAt).toLocaleDateString('de-DE')}
+                      {fmtDate(insight.createdAt)}
                     </div>
                     <Button variant="outline" size="sm">
                       Details anzeigen

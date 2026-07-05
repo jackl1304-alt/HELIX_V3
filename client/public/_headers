@@ -1,0 +1,12 @@
+# IMPORTANT — Non-functional in current Netcup/nginx deployment.
+# This file follows the Cloudflare Pages _headers directive format, which is
+# only interpreted by Cloudflare Pages routing. In our current architecture
+# (frontend served by Netcup nginx at /dist/public/), this file is just a
+# static asset and the headers below are NOT applied.
+#
+# If you ever switch the frontend hosting to Cloudflare Pages (see Phase-2
+# roadmap in docs/CLOUDFLARE-SETUP.md), COPY this file to your CF Pages
+# project root BEFORE deploying.
+#
+# For the active Netcup/nginx deployment, security headers come from
+# nginx.conf — see 'add_header' directives there.

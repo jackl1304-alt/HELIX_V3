@@ -1,0 +1,339 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helix.deltaways.de/schemas/eu-ai-act/template-1-art10-data-governance",
+  "title": "Data-Governance-Plan (EU AI Act Art. 10)",
+  "title_de": "Data-Governance-Plan",
+  "title_en": "Data Governance Plan",
+  "description_de": "Data-Governance-Plan gemäß EU AI Act Art. 10 für High-Risk-AI-Systeme. Pflicht ab 02.08.2026. Dokumentiert Trainings-, Validierungs- und Testdaten sowie Bias-Analyse, Repräsentativität und DSGVO-Compliance.",
+  "description_en": "Data Governance Plan per EU AI Act Art. 10 for high-risk AI systems. Mandatory from 02.08.2026. Documents training, validation, and test data as well as bias analysis, representativeness, and GDPR compliance.",
+  "type": "object",
+  "required": ["scopeAndPurpose", "dataSources", "dataQuality", "dataProcessingWorkflow", "responsibilities"],
+  "properties": {
+    "productInfo": {
+      "type": "object",
+      "title_de": "KI-System / Produkt",
+      "title_en": "AI System / Product",
+      "required": ["productName", "planVersion", "date", "author"],
+      "properties": {
+        "productName": {
+          "type": "string",
+          "title_de": "Produktname, Modellnummer, Version",
+          "title_en": "Product Name, Model Number, Version",
+          "description_de": "Eindeutige Produktbezeichnung",
+          "description_en": "Unique product designation"
+        },
+        "planVersion": {
+          "type": "string",
+          "title_de": "Plan-Version",
+          "title_en": "Plan Version",
+          "description_de": "Versionsnummer des Data-Governance-Plans",
+          "description_en": "Version number of the data governance plan"
+        },
+        "date": {
+          "type": "string",
+          "title_de": "Datum",
+          "title_en": "Date",
+          "description_de": "Erstellungsdatum",
+          "description_en": "Creation date",
+          "format": "date"
+        },
+        "author": {
+          "type": "string",
+          "title_de": "Autor",
+          "title_en": "Author",
+          "description_de": "Name + Qualifikation",
+          "description_en": "Name + qualification"
+        },
+        "dataGovernanceLead": {
+          "type": "string",
+          "title_de": "Verantwortlich für Data-Governance",
+          "title_en": "Data Governance Lead",
+          "description_de": "Name der verantwortlichen Person, z. B. Data Steward",
+          "description_en": "Name of the responsible person, e.g. Data Steward"
+        }
+      }
+    },
+    "scopeAndPurpose": {
+      "type": "string",
+      "title_de": "1. Anwendungsbereich und Zweck",
+      "title_en": "1. Scope and Purpose",
+      "description_de": "Welche Trainings-, Validierungs- und Test-Daten werden für das KI-System verwendet? Welche Datenquellen?",
+      "description_en": "Which training, validation, and test data are used for the AI system? Which data sources?",
+      "minLength": 50
+    },
+    "dataSources": {
+      "type": "object",
+      "title_de": "2. Datenquellen",
+      "title_en": "2. Data Sources",
+      "required": ["trainingData", "validationData"],
+      "properties": {
+        "trainingData": {
+          "type": "string",
+          "title_de": "Trainings-Daten",
+          "title_en": "Training Data",
+          "description_de": "z. B. annotierte klinische Studien-Daten, retrospektive Patientendaten, öffentlich verfügbare Datensätze",
+          "description_en": "e.g. annotated clinical study data, retrospective patient data, publicly available datasets",
+          "minLength": 20
+        },
+        "validationData": {
+          "type": "string",
+          "title_de": "Validierungs-Daten",
+          "title_en": "Validation Data",
+          "description_de": "Separate Hold-out-Sets",
+          "description_en": "Separate hold-out sets",
+          "minLength": 20
+        },
+        "testData": {
+          "type": "string",
+          "title_de": "Test-Daten",
+          "title_en": "Test Data",
+          "description_de": "Unabhängige Test-Sets",
+          "description_en": "Independent test sets"
+        },
+        "productionData": {
+          "type": "string",
+          "title_de": "Produktions-Daten (Live)",
+          "title_en": "Production Data (Live)",
+          "description_de": "z. B. anonymisierte Patientendaten aus Routineeinsatz",
+          "description_en": "e.g. anonymized patient data from routine use"
+        }
+      }
+    },
+    "dataQuality": {
+      "type": "object",
+      "title_de": "3. Datenqualität (Art. 10(2)-(3))",
+      "title_en": "3. Data Quality (Art. 10(2)-(3))",
+      "required": ["representativeness", "biasAnalysis"],
+      "properties": {
+        "representativeness": {
+          "type": "string",
+          "title_de": "Repräsentativität",
+          "title_en": "Representativeness",
+          "description_de": "Welche Subpopulationen sind enthalten? Sind alle relevanten Patientengruppen vertreten?",
+          "description_en": "Which subpopulations are included? Are all relevant patient groups represented?",
+          "minLength": 20
+        },
+        "biasAnalysis": {
+          "type": "string",
+          "title_de": "Bias-Analyse",
+          "title_en": "Bias Analysis",
+          "description_de": "Welche Methoden wurden zur Bias-Erkennung eingesetzt? z. B. Fairness-Metriken, Subgruppen-Performance-Vergleiche",
+          "description_en": "Which methods were used for bias detection? e.g. fairness metrics, subgroup performance comparisons",
+          "minLength": 20
+        },
+        "annotationQuality": {
+          "type": "string",
+          "title_de": "Annotation-Qualität",
+          "title_en": "Annotation Quality",
+          "description_de": "Welche Annotation-Standards? Inter-Annotator-Agreement?",
+          "description_en": "Which annotation standards? Inter-annotator agreement?"
+        },
+        "dataRedaction": {
+          "type": "string",
+          "title_de": "Daten-Redaktion",
+          "title_en": "Data Redaction",
+          "description_de": "PII-Entfernung, Anonymisierung, Pseudonymisierung",
+          "description_en": "PII removal, anonymization, pseudonymization"
+        },
+        "outlierHandling": {
+          "type": "string",
+          "title_de": "Outlier-Behandlung",
+          "title_en": "Outlier Handling",
+          "description_de": "Wie werden Daten-Ausreißer behandelt?",
+          "description_en": "How are data outliers handled?"
+        }
+      }
+    },
+    "dataProcessingWorkflow": {
+      "type": "string",
+      "title_de": "4. Datenverarbeitungs-Workflow",
+      "title_en": "4. Data Processing Workflow",
+      "description_de": "Schritt-für-Schritt: Daten-Akquise → Annotation → Validierung → Versionierung → Archivierung",
+      "description_en": "Step-by-step: data acquisition → annotation → validation → versioning → archiving",
+      "minLength": 50
+    },
+    "biasManagement": {
+      "type": "array",
+      "title_de": "5. Bias-Management",
+      "title_en": "5. Bias Management",
+      "description_de": "Auflistung der Bias-Typen mit Erkennungs- und Mitigations-Methoden",
+      "description_en": "List of bias types with detection and mitigation methods",
+      "items": {
+        "type": "object",
+        "required": ["biasType", "detectionMethod", "mitigation"],
+        "properties": {
+          "biasType": {
+            "type": "string",
+            "title_de": "Bias-Typ",
+            "title_en": "Bias Type",
+            "enum": ["Selection Bias", "Measurement Bias", "Confounding", "Label Bias", "Deployment Bias", "Reporting Bias", "Automation Bias", "Algorithmic Bias", "Other"]
+          },
+          "detectionMethod": {
+            "type": "string",
+            "title_de": "Erkennungs-Methode",
+            "title_en": "Detection Method",
+            "description_de": "Beschreibung der Methode zur Bias-Erkennung",
+            "description_en": "Description of the bias detection method"
+          },
+          "mitigation": {
+            "type": "string",
+            "title_de": "Mitigation",
+            "title_en": "Mitigation",
+            "description_de": "Beschreibung der Maßnahmen zur Bias-Reduktion",
+            "description_en": "Description of bias reduction measures"
+          }
+        }
+      }
+    },
+    "versionControlAndAuditTrail": {
+      "type": "string",
+      "title_de": "6. Versionskontrolle und Audit-Trail",
+      "title_en": "6. Version Control and Audit Trail",
+      "description_de": "Wie werden Datensätze versioniert? Hash-Speicherung? Audit-Log?",
+      "description_en": "How are datasets versioned? Hash storage? Audit log?",
+      "minLength": 20
+    },
+    "dataRetentionAndDeletion": {
+      "type": "object",
+      "title_de": "7. Daten-Retention und -Löschung",
+      "title_en": "7. Data Retention and Deletion",
+      "properties": {
+        "retentionPeriod": {
+          "type": "string",
+          "title_de": "Aufbewahrungsdauer",
+          "title_en": "Retention Period",
+          "description_de": "z. B. 10 Jahre nach Produkt-Lifecycle-Ende",
+          "description_en": "e.g. 10 years after product lifecycle end"
+        },
+        "deletionProcess": {
+          "type": "string",
+          "title_de": "Lösch-Prozess",
+          "title_en": "Deletion Process",
+          "description_de": "DSGVO-konformes Löschverfahren",
+          "description_en": "GDPR-compliant deletion procedure"
+        }
+      }
+    },
+    "dataProtectionCompliance": {
+      "type": "object",
+      "title_de": "8. Datenschutz-Compliance",
+      "title_en": "8. Data Protection Compliance",
+      "required": ["gdprCompliance"],
+      "properties": {
+        "gdprCompliance": {
+          "type": "string",
+          "title_de": "DSGVO-Konformität",
+          "title_en": "GDPR Compliance",
+          "description_de": "Ja / Nein / Begründung",
+          "description_en": "Yes / No / Justification",
+          "enum": ["Ja — vollständig DSGVO-konform", "Nein — Begründung erforderlich", "Teilweise — siehe Begründung"]
+        },
+        "consent": {
+          "type": "string",
+          "title_de": "Einwilligungen",
+          "title_en": "Consent",
+          "description_de": "Wie wurden Einwilligungen eingeholt? Broad-Consent / Specific-Consent?",
+          "description_en": "How were consents obtained? Broad consent / specific consent?",
+          "enum": ["Broad Consent (Ethikkommission)", "Specific Consent (Studien-spezifisch)", "Opt-Out (DSGVO Art. 6(1)(f))", "Anonymisierung — kein Consent erforderlich", "Other"]
+        },
+        "pseudonymization": {
+          "type": "string",
+          "title_de": "Pseudonymisierung",
+          "title_en": "Pseudonymization",
+          "description_de": "Methode der Pseudonymisierung",
+          "description_en": "Pseudonymization method"
+        },
+        "crossBorderTransfer": {
+          "type": "string",
+          "title_de": "Cross-Border-Transfer",
+          "title_en": "Cross-Border Transfer",
+          "description_de": "Welche Drittländer? Angemessenheitsbeschluss? SCCs?",
+          "description_en": "Which third countries? Adequacy decision? SCCs?"
+        }
+      }
+    },
+    "lifecycleManagement": {
+      "type": "object",
+      "title_de": "9. Lebenszyklus-Management",
+      "title_en": "9. Lifecycle Management",
+      "properties": {
+        "dataUpdates": {
+          "type": "string",
+          "title_de": "Daten-Updates",
+          "title_en": "Data Updates",
+          "description_de": "Wann und wie werden Daten aktualisiert?",
+          "description_en": "When and how are data updated?"
+        },
+        "modelRetraining": {
+          "type": "string",
+          "title_de": "Modell-Retraining",
+          "title_en": "Model Retraining",
+          "description_de": "Trigger für Retraining (zeitgesteuert / Performance-basiert / Event-getrieben)",
+          "description_en": "Triggers for retraining (time-based / performance-based / event-driven)"
+        },
+        "dataDriftDetection": {
+          "type": "string",
+          "title_de": "Daten-Drift-Detection",
+          "title_en": "Data Drift Detection",
+          "description_de": "Methoden zur Erkennung von Distribution-Shift (z. B. PSI, KS-Test, Embedding-Drift)",
+          "description_en": "Methods for detecting distribution shift (e.g. PSI, KS test, embedding drift)"
+        }
+      }
+    },
+    "responsibilities": {
+      "type": "object",
+      "title_de": "10. Verantwortlichkeiten",
+      "title_en": "10. Responsibilities",
+      "properties": {
+        "dataSteward": {
+          "type": "string",
+          "title_de": "Data Steward",
+          "title_en": "Data Steward",
+          "description_de": "Name der für Data-Governance verantwortlichen Person",
+          "description_en": "Name of the person responsible for data governance"
+        },
+        "mlEngineer": {
+          "type": "string",
+          "title_de": "ML Engineer",
+          "title_en": "ML Engineer",
+          "description_de": "Name des ML-Ingenieurs",
+          "description_en": "Name of the ML engineer"
+        },
+        "clinicalExpert": {
+          "type": "string",
+          "title_de": "Clinical Expert",
+          "title_en": "Clinical Expert",
+          "description_de": "Name des klinischen Experten",
+          "description_en": "Name of the clinical expert"
+        },
+        "dataProtectionOfficer": {
+          "type": "string",
+          "title_de": "Datenschutzbeauftragter",
+          "title_en": "Data Protection Officer",
+          "description_de": "Name des Datenschutzbeauftragten (DPO)",
+          "description_en": "Name of the Data Protection Officer (DPO)"
+        },
+        "prrc": {
+          "type": "string",
+          "title_de": "PRRC (Person Responsible for Regulatory Compliance)",
+          "title_en": "PRRC (Person Responsible for Regulatory Compliance)",
+          "description_de": "Name der für Regulatory Compliance verantwortlichen Person gemäß MDR Art. 15",
+          "description_en": "Name of the person responsible for regulatory compliance per MDR Art. 15"
+        }
+      }
+    },
+    "signatureDataSteward": {
+      "type": "string",
+      "title_de": "Unterschrift Data Steward",
+      "title_en": "Data Steward Signature",
+      "description_de": "Digitale Signatur oder Name als Bestätigung",
+      "description_en": "Digital signature or name as confirmation"
+    },
+    "signatureDate": {
+      "type": "string",
+      "title_de": "Unterschrift-Datum",
+      "title_en": "Signature Date",
+      "format": "date"
+    }
+  }
+}

@@ -13,7 +13,16 @@
     "db:studio": "drizzle-kit studio",
     "migrate:manual": "tsx scripts/create-migration.ts",
     "check": "tsc --noEmit",
-    "test:sanitization": "tsx scripts/test-sanitization.ts"
+    "test:sanitization": "tsx scripts/test-sanitization.ts",
+    "catalog:build": "node scripts/build-master-sources-catalog.mjs",
+    "catalog:seed": "tsx scripts/seed-master-sources.ts",
+    "deploy:cf": "bash scripts/cf-setup.sh",
+    "deploy:netcup": "bash scripts/cf-deploy-netcup.sh",
+    "deploy:all": "npm run deploy:cf && npm run deploy:netcup",
+    "test:smoke": "bash scripts/cf-smoke-test.sh",
+    "test:smoke:full": "TEST_AUTH=2 bash scripts/cf-smoke-test.sh",
+    "cloudflare:setup": "bash scripts/cf-setup.sh",
+    "cloudflare:smoke": "bash scripts/cf-smoke-test.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.70.1",

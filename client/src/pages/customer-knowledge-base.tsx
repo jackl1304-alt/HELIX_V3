@@ -11,6 +11,7 @@ import { useLiveTenantPermissions } from '@/hooks/use-live-tenant-permissions';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { BookOpen, Database, Globe, FileText, Filter, Search, Download, ExternalLink, RefreshCw, Calendar } from "@/components/icons";
+import { fmtDate } from "@/lib/date";
 
 // Mock tenant ID
 const mockTenantId = "030d3e01-32c4-4f95-8d54-98be948e8d4b";
@@ -261,7 +262,7 @@ export default function CustomerKnowledgeBase() {
                         <Calendar className="w-4 h-4" />
                         <div className="flex items-center gap-2">
                           <Clock className="h-3 w-3" />
-                          <span>{new Date(article.published_at).toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                          <span>{fmtDate(article.published_at, { mode: 'long' })}</span>
                           {article.source_id && (
                             <>
                               <span>•</span>

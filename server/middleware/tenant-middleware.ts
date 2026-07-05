@@ -11,6 +11,32 @@ export interface TenantRequest extends Request {
   };
 }
 
+// Module-level default permissions — alle neuen Felder default-true für Abwärtskompatibilität
+const DEFAULT_TENANT_PERMISSIONS: Record<string, boolean> = {
+  dashboard: true,
+  regulatoryUpdates: true,
+  legalCases: true,
+  knowledgeBase: true,
+  newsletters: true,
+  analytics: true,
+  reports: true,
+  dataCollection: true,
+  globalSources: true,
+  historicalData: true,
+  administration: false,
+  userManagement: false,
+  systemSettings: false,
+  auditLogs: false,
+  analyticsInsights: true,
+  advancedAnalytics: false,
+  aiInsights: true,
+  globalApprovals: true,
+  ongoingApprovals: true,
+  syncManager: true,
+  projects: true,
+  patents: true,
+};
+
 /**
  * Middleware zur Verifizierung und Ladung von Tenant-Daten aus der URL
  * Erwartet /tenant/:tenantId/* Format
@@ -38,10 +64,13 @@ export async function loadTenant(req: TenantRequest, res: Response, next: NextFu
       return res.status(403).json({ error: 'Tenant account is suspended' });
     }
 
+    const storedPermissions = (tenant.settings as any)?.permissions || {};
+    const permissions = { ...DEFAULT_TENANT_PERMISSIONS, ...storedPermissions };
+
     req.tenant = {
       id: tenant.id,
       name: tenant.name,
-      permissions: (tenant.settings as any)?.permissions || {},
+      permissions,
       subscriptionPlan: tenant.subscription_tier,
       settings: tenant.settings || {},
     };

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db';
 import { legalCases } from '../../shared/schema.js';
 import { eq, sql, isNull, or, and } from 'drizzle-orm';
+import { legalCaseCollector } from '../services/legalCaseCollector.js';
 
 const router = Router();
 
@@ -291,6 +292,21 @@ router.post('/fill-all-missing', async (req, res) => {
   } catch (error: any) {
     console.error('[ERROR] Batch fill failed:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Direct admin trigger: collect real legal cases from FDA Enforcement + EU CELEX + CourtListener.
+ * Dedupes by caseNumber; safe to re-run.
+ * POST /api/legal-cases/collect
+ */
+router.post('/collect', async (_req, res) => {
+  try {
+    const result = await legalCaseCollector.collectAllLegalCases();
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error('[ERROR] Legal cases manual collection failed:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

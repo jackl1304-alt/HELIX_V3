@@ -11,6 +11,7 @@ import { useLiveTenantPermissions } from '@/hooks/use-live-tenant-permissions';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { Database, Activity, CheckCircle, AlertTriangle, Clock, Play, Pause, RotateCcw, Download } from "@/components/icons";
+import { fmtDate } from "@/lib/date";
 
 // Mock tenant ID
 const mockTenantId = "030d3e01-32c4-4f95-8d54-98be948e8d4b";
@@ -359,14 +360,14 @@ export default function CustomerDataCollection() {
                       <div>
                         <div className="text-gray-500">Start:</div>
                         <div className="font-medium">
-                          {new Date(job.startTime).toLocaleString('de-DE')}
+                          {fmtDate(job.startTime, { mode: 'datetime' })}
                         </div>
                       </div>
                       {job.endTime && (
                         <div>
                           <div className="text-gray-500">Ende:</div>
                           <div className="font-medium">
-                            {new Date(job.endTime).toLocaleString('de-DE')}
+                            {fmtDate(job.endTime, { mode: 'datetime' })}
                           </div>
                         </div>
                       )}
@@ -374,7 +375,7 @@ export default function CustomerDataCollection() {
                         <div>
                           <div className="text-gray-500">Nächster Lauf:</div>
                           <div className="font-medium">
-                            {new Date(job.nextRun).toLocaleString('de-DE')}
+                            {fmtDate(job.nextRun, { mode: 'datetime' })}
                           </div>
                         </div>
                       )}

@@ -12,6 +12,7 @@ import { useLiveTenantPermissions } from '@/hooks/use-live-tenant-permissions';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { AlertTriangle, Clock, FileText, Scale, DollarSign, Brain, Gavel, RefreshCw, Download } from "@/components/icons";
+import { fmtDate } from "@/lib/date";
 
 // Mock tenant ID
 const mockTenantId = "030d3e01-32c4-4f95-8d54-98be948e8d4b";
@@ -235,7 +236,7 @@ export default function CustomerLegalCases() {
                       </div>
                       <div className="flex items-center space-x-1">
                         <Clock className="w-4 h-4" />
-                        <span>{new Date(legalCase.decision_date).toLocaleDateString('de-DE')}</span>
+                        <span>{fmtDate(legalCase.decision_date)}</span>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">

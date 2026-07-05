@@ -179,6 +179,8 @@ function App() {
                   <Route path="/regulatory-updates" component={RegulatoryUpdates} />
                   <Route path="/regulatory-intelligence" component={RegulatoryIntelligence} />
                   <Route path="/rechtsprechung" component={RechtsprechungFixed} />
+                  {/* English alias — canonical: /rechtsprechung */}
+                  <Route path="/legal-cases" component={RechtsprechungFixed} />
                   <Route path="/rechtsprechung-analyse" component={RechtsprechungAnalyse} />
 
                   {/* Stakeholder Dashboards */}
@@ -209,6 +211,15 @@ function App() {
                   <Route path="/en-standards" component={ENStandards} />
                   <Route path="/aami-standards" component={AAMIStandards} />
                   <Route path="/eu-mdr" component={EUMDR} />
+
+                  {/* German-URL aliases — Legacy / Deep-Links aus Sidebar & Bookmarks.
+                      Werden auf die kanonischen englischen Routes gemappt, damit alte
+                      URLs nicht in 404 landen. */}
+                  <Route path="/ki-erkenntnisse" component={AnalyticsInsights} />
+                  <Route path="/ai-insights" component={AnalyticsInsights} />
+                  <Route path="/wissensdatenbank" component={KnowledgeBase} />
+                  <Route path="/admin/customers" component={AdminCustomers} />
+                  <Route path="/customer-area" component={CustomerAreas} />
 
                   {/* Advanced */}
                   <Route path="/sync-manager" component={SyncManager} />

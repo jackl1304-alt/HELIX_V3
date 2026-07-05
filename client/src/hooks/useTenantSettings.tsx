@@ -18,6 +18,13 @@ export interface TenantPermissions {
   auditLogs: boolean;
   analyticsInsights: boolean;
   advancedAnalytics: boolean;
+  aiInsights: boolean;
+  // Pass 6: Neue Permissions für Approvals, Projects, Patents, Sync
+  globalApprovals: boolean;
+  ongoingApprovals: boolean;
+  syncManager: boolean;
+  projects: boolean;
+  patents: boolean;
 }
 
 export interface TenantSettings {

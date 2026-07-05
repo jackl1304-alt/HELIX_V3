@@ -581,16 +581,30 @@ export class LegalCaseCollector {
       logger.error('FDA enforcement collection failed:', { error: axios.isAxiosError(error) ? error.message : error });
       return [];
     }
-  }
-
-  /**
-   * Store legal cases in database
+  }  /**
+   * Store legal cases in database.
+   * Dedupes by caseNumber to keep the table idempotent across re-syncs.
    */
   async storeLegalCases(cases: any[]): Promise<number> {
     let stored = 0;
+    let skipped = 0;
+
+    // Collect existing case numbers in one query so re-runs don't pile up duplicates.
+    const existing: any[] = await storage.getAllLegalCases
+      ? await storage.getAllLegalCases()
+      : [];
+    const existingCaseNumbers = new Set(
+      existing.map((c: any) => c.caseNumber).filter(Boolean)
+    );
 
     for (const legalCase of cases) {
+
       try {
+        if (legalCase.caseNumber && existingCaseNumbers.has(legalCase.caseNumber)) {
+          skipped++;
+          continue;
+        }
+
         await storage.createLegalCase({
           title: legalCase.title,
           caseNumber: legalCase.caseNumber,
@@ -604,13 +618,14 @@ export class LegalCaseCollector {
           caseType: legalCase.caseType || 'Medical Device Case',
           region: legalCase.region || 'International',
         });
+        if (legalCase.caseNumber) existingCaseNumbers.add(legalCase.caseNumber);
         stored++;
       } catch (storeError) {
         logger.error(`Failed to store legal case "${legalCase.title}":`, { error: storeError });
       }
     }
 
-    logger.info(`Stored ${stored}/${cases.length} legal cases in database`);
+    logger.info(`Stored ${stored} new, skipped ${skipped} existing (${cases.length - stored - skipped} failed) legal cases`);
     return stored;
   }
 

@@ -11,6 +11,7 @@ import { useLiveTenantPermissions } from '@/hooks/use-live-tenant-permissions';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { Mail, Calendar, Download, Eye, FileText, Globe, Filter } from "@/components/icons";
+import { fmtDate } from "@/lib/date";
 
 // Mock tenant ID
 const mockTenantId = "030d3e01-32c4-4f95-8d54-98be948e8d4b";
@@ -231,7 +232,7 @@ export default function CustomerNewsletters() {
                     <div className="flex items-center space-x-4 text-sm text-gray-500 mb-3">
                       <div className="flex items-center space-x-1">
                         <Calendar className="w-4 h-4" />
-                        <span>{new Date(newsletter.published_at).toLocaleDateString('de-DE')}</span>
+                        <span>{fmtDate(newsletter.published_at)}</span>
                       </div>
                       <div className="flex items-center space-x-1">
                         <Globe className="w-4 h-4" />

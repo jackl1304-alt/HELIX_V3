@@ -43,6 +43,7 @@ import {
   Mail,
   Phone
 } from "@/components/icons";
+import { fmtDate } from "@/lib/date";
 
 // Type definitions
 interface CustomerPermissions {
@@ -257,7 +258,7 @@ export default function AdminCustomers() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  Erstellt: {new Date(customer.createdAt).toLocaleDateString('de-DE')}
+                  Erstellt: {fmtDate(customer.createdAt)}
                 </div>
               </div>
             </div>
@@ -402,12 +403,12 @@ export default function AdminCustomers() {
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Erstellt am</Label>
-                    <p className="text-sm text-muted-foreground">{new Date(viewingTenant.createdAt).toLocaleDateString('de-DE')}</p>
+                    <p className="text-sm text-muted-foreground">{fmtDate(viewingTenant.createdAt)}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Trial endet am</Label>
                     <p className="text-sm text-muted-foreground">
-                      {viewingTenant.trialEndsAt ? new Date(viewingTenant.trialEndsAt).toLocaleDateString('de-DE') : 'Kein Trial'}
+                      {viewingTenant.trialEndsAt ? fmtDate(viewingTenant.trialEndsAt) : 'Kein Trial'}
                     </p>
                   </div>
                 </div>

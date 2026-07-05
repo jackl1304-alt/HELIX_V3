@@ -9,6 +9,7 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 import { useLiveTenantPermissions } from "@/hooks/use-live-tenant-permissions";
 import { useCustomerTheme } from "@/contexts/customer-theme-context";
 import { FileText, Calendar, Globe, Filter } from "@/components/icons";
+import { fmtDate } from "@/lib/date";
 
 const mockTenantId = "030d3e01-32c4-4f95-8d54-98be948e8d4b";
 
@@ -124,7 +125,7 @@ export default function CustomerRegulatoryUpdates() {
                       </div>
                       <div className="flex items-center space-x-1">
                         <Calendar className="w-4 h-4" />
-                        <span>{new Date(update.published_date).toLocaleDateString('de-DE')}</span>
+                        <span>{fmtDate(update.published_date)}</span>
                       </div>
                     </div>
                     {update.device_types && (

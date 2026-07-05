@@ -26,8 +26,8 @@ interface Patent {
   applicant: string;
   inventors: string;
   jurisdiction: string;
-  filingDate: string;
-  publicationDate: string;
+  filingDate: string | null;
+  publicationDate: string | null;
   grantDate: string | null;
   status: string;
   deviceType: string;
@@ -35,7 +35,17 @@ interface Patent {
   source: string;
 }
 
-export default function Patents() {
+/**
+ * Safe date formatter — handles null/invalid/non-ISO values without producing
+ * the literal text "Invalid Date" or a misleading 1970-01-01 epoch row.
+ */
+function fmtPatentDate(input: string | null | undefined, fallback: string = '—'): string {
+  if (!input) return fallback;
+  const d = new Date(input);
+  return Number.isNaN(d.getTime()) ? fallback : d.toLocaleDateString('de-DE');
+}
+
+export default function Patents(): JSX.Element {
   const [patents, setPatents] = useState<Patent[]>([]);
   const [filtered, setFiltered] = useState<Patent[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,14 +64,34 @@ export default function Patents() {
   const fetchPatents = async () => {
     try {
       setLoading(true);
-      // Fetch real patents from worldwide sources
-      const response = await fetch('/api/patents/real');
+      // Master catalog endpoint serves 20 curated QMS-relevant patents from
+      // Google Patents / Espacenet / WIPO Patentscope. Response shape is
+      // `{ data: [...], meta: {...} }` — unwrap and adapt to the Patent shape
+      // used by this page.
+      const response = await fetch('/api/patents');
       const data = await response.json();
-      console.log('Patent API Response:', data);
-      setPatents(data.patents || []);
+      const rawList = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+      const adapted: Patent[] = rawList.map((p: any) => ({
+        id: p.id ?? p.publicationNumber,
+        patentNumber: p.publicationNumber ?? p.id ?? '—',
+        title: p.title ?? '—',
+        abstract: p.abstract ?? 'Master-Katalog-Eintrag (kein Abstract verfügbar).',
+        applicant: p.source ?? 'Master-Katalog',
+        inventors: '—',
+        jurisdiction: p.jurisdiction ?? '—',
+        // master-catalog has no publicationDate per item — surface null so the UI shows
+        // a clean placeholder instead of a misleading 1970-01-01 epoch row.
+        filingDate: p.publicationDate ?? null,
+        publicationDate: p.publicationDate ?? null,
+        grantDate: (p.status ?? '').toLowerCase() === 'granted' ? (p.publicationDate ?? null) : null,
+        status: p.status ?? 'unknown',
+        deviceType: 'SaMD-Technologie',
+        riskClass: '—',
+        source: p.source ?? 'Master-Katalog',
+      }));
+      setPatents(adapted);
     } catch (error) {
       console.error('Error fetching patents:', error);
-      // Fallback to empty array
       setPatents([]);
     } finally {
       setLoading(false);
@@ -286,7 +316,7 @@ export default function Patents() {
                         <Calendar className="h-4 w-4" />
                         Anmeldung
                       </div>
-                      <p className="text-sm">{new Date(patent.filingDate).toLocaleDateString('de-DE')}</p>
+                      <p className="text-sm">{fmtPatentDate(patent.filingDate)}</p>
                     </div>
 
                     <div>
@@ -294,7 +324,7 @@ export default function Patents() {
                         <Calendar className="h-4 w-4" />
                         Veröffentlicht
                       </div>
-                      <p className="text-sm">{new Date(patent.publicationDate).toLocaleDateString('de-DE')}</p>
+                      <p className="text-sm">{fmtPatentDate(patent.publicationDate)}</p>
                     </div>
 
                     <div>

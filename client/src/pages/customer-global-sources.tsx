@@ -10,6 +10,7 @@ import { useLiveTenantPermissions } from '@/hooks/use-live-tenant-permissions';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { Globe, Activity, CheckCircle, AlertTriangle, Clock, Database, ExternalLink, RefreshCw } from "@/components/icons";
+import { fmtDate } from "@/lib/date";
 
 // Mock tenant ID
 const mockTenantId = "030d3e01-32c4-4f95-8d54-98be948e8d4b";
@@ -70,7 +71,7 @@ export default function CustomerGlobalSources() {
   };
 
   // Fetch global sources - only if user has permission
-  const { data: sources, isLoading } = useQuery({
+  const { data: sourcesResponse, isLoading } = useQuery({
     queryKey: ['/api/global-sources', tenantId],
     queryFn: async () => {
       const response = await fetch('/api/global-sources');
@@ -79,6 +80,8 @@ export default function CustomerGlobalSources() {
     },
     enabled: Boolean(permissions?.globalSources)
   });
+
+  const sources: DataSource[] = sourcesResponse?.data ?? [];
 
   if (isTenantLoading) {
     return (
@@ -125,13 +128,13 @@ export default function CustomerGlobalSources() {
   }
 
   // Filter sources
-  const filteredSources = sources?.filter((source: DataSource) => {
+  const filteredSources = sources.filter((source: DataSource) => {
     const matchesRegion = selectedRegion === 'all' || source.region === selectedRegion;
     const matchesStatus = selectedStatus === 'all' || source.status === selectedStatus;
     const matchesType = selectedType === 'all' || source.type === selectedType;
     
     return matchesRegion && matchesStatus && matchesType;
-  }) || [];
+  });
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -289,7 +292,7 @@ export default function CustomerGlobalSources() {
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-500">Letzter Sync:</span>
                         <span className="font-medium">
-                          {new Date(source.lastSync).toLocaleDateString('de-DE')}
+                          {fmtDate(source.lastSync)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-sm">

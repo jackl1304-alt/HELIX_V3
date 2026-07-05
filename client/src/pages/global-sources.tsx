@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLocation } from 'wouter';
-import { ArrowLeft, Globe, Database, FileText, Patent, BookOpen, ExternalLink } from "@/components/icons";
+import { ArrowLeft, Globe, Database, FileText, Patent, BookOpen, ExternalLink, Download } from "@/components/icons";
 
 interface GlobalAuthority {
   id: string;
@@ -41,33 +41,65 @@ interface ScientificStudy {
   source: string;
 }
 
+interface CatalogMeta {
+  version: string;
+  sourceDocument: string;
+  accessDate: string;
+  totalSources: number;
+  checksum: string;
+}
+
 export default function GlobalSources() {
   const [, setLocation] = useLocation();
   const [authorities, setAuthorities] = useState<GlobalAuthority[]>([]);
   const [sources, setSources] = useState<RegulatorySource[]>([]);
   const [patents, setPatents] = useState<QMSPatent[]>([]);
   const [studies, setStudies] = useState<ScientificStudy[]>([]);
+  const [catalogMeta, setCatalogMeta] = useState<CatalogMeta | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+
+  const downloadCatalog = async () => {
+    try {
+      setExporting(true);
+      const res = await fetch('/api/catalog/markdown');
+      const payload = await res.json();
+      const blob = new Blob([payload.content], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = payload.downloadFilename || 'MASTER_SOURCES_CATALOG.md';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export fehlgeschlagen:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [authRes, sourcesRes, patentsRes, studiesRes] = await Promise.all([
+        const [authRes, sourcesRes, patentsRes, studiesRes, catalogRes] = await Promise.all([
           fetch('/api/global-authorities'),
           fetch('/api/regulatory-sources'),
           fetch('/api/qms-patents'),
-          fetch('/api/scientific-studies')
+          fetch('/api/scientific-studies'),
+          fetch('/api/catalog'),
         ]);
         
         const authData = await authRes.json();
         const sourcesData = await sourcesRes.json();
         const patentsData = await patentsRes.json();
         const studiesData = await studiesRes.json();
+        const catalogData = catalogRes.ok ? await catalogRes.json() : null;
         
         setAuthorities(authData.data || []);
         setSources(sourcesData.data || []);
         setPatents(patentsData.data || []);
         setStudies(studiesData.data || []);
+        setCatalogMeta(catalogData?.meta || authData.meta || null);
       } catch (error) {
         console.error('Fehler beim Laden der Daten:', error);
       } finally {
@@ -91,14 +123,28 @@ export default function GlobalSources() {
               <ArrowLeft className="h-4 w-4" />
               <span>Zurück zum Dashboard</span>
             </Button>
-            <div>
+            <div className="flex-1">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                 Global Sources
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
-                Umfassende weltweite regulatorische Quellen, Patente und Studien
+                Master-Verzeichnis ISO 13485 / QMSR — Behörden, Normen, Patente, Studien
               </p>
+              {catalogMeta && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {catalogMeta.totalSources} Quellen · v{catalogMeta.version} · {catalogMeta.sourceDocument} · Stand {catalogMeta.accessDate}
+                </p>
+              )}
             </div>
+            <Button
+              variant="outline"
+              onClick={downloadCatalog}
+              disabled={exporting || loading}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              {exporting ? 'Export…' : 'Quellenverzeichnis'}
+            </Button>
           </div>
         </div>
       </div>

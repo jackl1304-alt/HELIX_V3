@@ -13,6 +13,7 @@ import { Pool as PgPool } from 'pg';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import { dataSources, aiTasks, type AiTask, type InsertAiTask } from "../shared/schema.js";
 import { eq, lt, desc, and } from "drizzle-orm";
+import { loadMasterSourcesCatalog } from '../shared/masterSources.js';
 
 // Enhanced database connection with debug logging
 const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL;
@@ -761,6 +762,28 @@ class MorningStorage implements IStorage {
   async getAllRegulatoryUpdates() {
     try {
       console.log('[DB] getAllRegulatoryUpdates called - ALLE DATEN FÜR FRONTEND MIT QUELLEN');
+      if (!sql || !dbConnected) {
+        console.warn('[DB] No database connection available - returning fallback regulatory updates');
+        const catalog = loadMasterSourcesCatalog();
+        return catalog.regulatorySources.map((entry) => ({
+          id: entry.id,
+          title: entry.name,
+          summary: entry.description || `${entry.publisher || 'Regulatory'} source`,
+          source_name: entry.publisher || entry.region || 'Unknown',
+          source_url: entry.url,
+          source_country: entry.region,
+          source_description: entry.category,
+          url: entry.url,
+          publishedAt: entry.accessDate,
+          created_at: entry.accessDate,
+          updated_at: entry.accessDate,
+          source_id: entry.id,
+          content: entry.url,
+          tags: [entry.region, entry.category].filter(Boolean),
+          isActive: true
+        }));
+      }
+
       // Frontend-Anzeige: JOIN mit data_sources für Quelleninformationen
       const result = await sql`
         SELECT
@@ -776,12 +799,58 @@ class MorningStorage implements IStorage {
           ru.created_at DESC
         LIMIT 5000
       `;
-      console.log(`[DB] Alle regulatory updates für Frontend: ${result.length} Einträge (mit Quellen)`);
-      return result;
+      const updates = Array.isArray(result) ? result : [];
+      console.log(`[DB] Alle regulatory updates für Frontend: ${updates.length} Einträge (mit Quellen)`);
+
+      if (updates.length < 20) {
+        console.warn(`[DB] Regulatory updates count is low (${updates.length}); supplementing with fallback catalog`);
+        const catalog = loadMasterSourcesCatalog();
+        const fallbackUpdates = catalog.regulatorySources.map((entry) => ({
+          id: entry.id,
+          title: entry.name,
+          summary: entry.description || `${entry.publisher || 'Regulatory'} source`,
+          source_name: entry.publisher || entry.region || 'Unknown',
+          source_url: entry.url,
+          source_description: entry.category,
+          source_country: entry.region,
+          url: entry.url,
+          publishedAt: entry.accessDate,
+          created_at: entry.accessDate,
+          updated_at: entry.accessDate,
+          source_id: entry.id,
+          content: entry.url,
+          tags: [entry.region, entry.category].filter(Boolean),
+          isActive: true
+        }));
+        const merged = [
+          ...updates,
+          ...fallbackUpdates.filter((fallback) => !updates.some((existing) => existing.id === fallback.id))
+        ];
+        console.log(`[DB] Returning merged regulatory updates: ${merged.length} entries`);
+        return merged;
+      }
+
+      return updates;
     } catch (error) {
       console.error("❌ Database error fetching regulatory updates:", error);
-      // Keine Mock-Daten - leeres Array zurückgeben
-      return [];
+      const catalog = loadMasterSourcesCatalog();
+      return catalog.regulatorySources.map((entry) => ({
+        id: entry.id,
+        title: entry.name,
+        summary: entry.description || `${entry.publisher || 'Regulatory'} source`,
+        source_name: entry.publisher || entry.region || 'Unknown',
+        source_url: entry.url,
+        source_description: entry.category,
+        source_country: entry.region,
+        url: entry.url,
+        publishedAt: entry.accessDate,
+        created_at: entry.accessDate,
+        updated_at: entry.accessDate,
+        source_id: entry.id,
+        content: entry.url,
+        tags: [entry.region, entry.category].filter(Boolean),
+        isActive: true
+      }));
     }
   }
 
@@ -1266,38 +1335,89 @@ class MorningStorage implements IStorage {
     try {
       console.log('[STORAGE] Fetching data sources...');
       const result = await sql`SELECT id, name, type, country, is_active, created_at, api_endpoint FROM data_sources ORDER BY name`;
-      console.log(`[STORAGE] Data sources fetched: ${result.length} items`);
-      return Array.isArray(result) ? result : [];
+      const sources = Array.isArray(result) ? result : [];
+      console.log(`[STORAGE] Data sources fetched: ${sources.length} items`);
+
+      if (sources.length >= 20) {
+        return sources;
+      }
+
+      console.warn(`[STORAGE] Data sources count is low (${sources.length}); supplementing with comprehensive catalog fallback`);
+      const { getAllDataSources } = await import('./comprehensiveDataSources.js');
+      const catalog = getAllDataSources();
+      const fallbackEntries = [
+        ...catalog.detailedRegulatorySources.map((entry: any) => ({
+          id: entry.id,
+          name: entry.name,
+          type: entry.type || 'regulatory',
+          category: entry.category || 'regulatory',
+          country: entry.region || 'global',
+          region: entry.region || 'global',
+          is_active: true,
+          isActive: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          endpoint: entry.url
+        })),
+        ...catalog.globalAuthorities.map((entry: any) => ({
+          id: entry.id,
+          name: entry.name,
+          type: entry.type || 'authority',
+          category: entry.type || 'authority',
+          country: entry.region || 'global',
+          region: entry.region || 'global',
+          is_active: true,
+          isActive: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          endpoint: entry.url
+        }))
+      ];
+
+      const merged = [
+        ...sources,
+        ...fallbackEntries.filter((entry: any) => !sources.some((source: any) => source.id === entry.id))
+      ];
+
+      console.log(`[STORAGE] Returning merged data sources: ${merged.length} entries`);
+      return merged;
     } catch (error: any) {
       console.error('[STORAGE] Data sources fetch failed:', error);
 
-      // FALLBACK: Default data sources wenn DB fehlschlägt
-      return [
-        {
-          id: 'fda_510k',
-          name: 'FDA 510(k) Clearances',
-          description: 'FDA medical device clearances',
-          type: 'api',
-          country: 'US',
+      // FALLBACK: Use comprehensive data source catalog when DB is unavailable
+      const { getAllDataSources } = await import('./comprehensiveDataSources.js');
+      const catalog = getAllDataSources();
+      const sourceEntries = [
+        ...catalog.detailedRegulatorySources.map((entry: any) => ({
+          id: entry.id,
+          name: entry.name,
+          type: entry.type || 'regulatory',
+          category: entry.category || 'regulatory',
+          country: entry.region || 'global',
+          region: entry.region || 'global',
           is_active: true,
           isActive: true,
-          created_at: new Date(),
-          updated_at: new Date(),
-          endpoint: "https://api.fda.gov/device/510k.json"
-        },
-        {
-          id: 'fda_recalls',
-          name: 'FDA Device Recalls',
-          description: 'FDA medical device recalls',
-          type: 'api',
-          country: 'US',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          endpoint: entry.url
+        })),
+        ...catalog.globalAuthorities.map((entry: any) => ({
+          id: entry.id,
+          name: entry.name,
+          type: entry.type || 'authority',
+          category: entry.type || 'authority',
+          country: entry.region || 'global',
+          region: entry.region || 'global',
           is_active: true,
           isActive: true,
-          created_at: new Date(),
-          updated_at: new Date(),
-          endpoint: "https://api.fda.gov/device/recall.json"
-        }
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          endpoint: entry.url
+        }))
       ];
+
+      console.log('[STORAGE] Returning fallback data sources from comprehensive catalog:', sourceEntries.length);
+      return sourceEntries;
     }
   }
 

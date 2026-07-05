@@ -1,0 +1,374 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helix.deltaways.de/schemas/eu-ai-act/template-4-art49-registration",
+  "title": "EU-AI-Database-Registrierung (EU AI Act Art. 49)",
+  "title_de": "EU-AI-Database-Registrierungs-Dossier",
+  "title_en": "EU AI Database Registration Dossier",
+  "description_de": "Registrierungs-Dossier für High-Risk-AI-Systeme gemäß EU AI Act Art. 49. Pflicht ab 02.08.2026 für alle High-Risk-AI-Systeme nach Anhang III.",
+  "description_en": "Registration dossier for high-risk AI systems per EU AI Act Art. 49. Mandatory from 02.08.2026 for all Annex III high-risk AI systems.",
+  "type": "object",
+  "required": ["providerInfo", "aiSystemIdentification", "classification", "intendedPurpose", "conformityAssessment", "responsiblePerson"],
+  "properties": {
+    "providerInfo": {
+      "type": "object",
+      "title_de": "1. Anbieter-Informationen",
+      "title_en": "1. Provider Information",
+      "required": ["name", "address"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "title_de": "Name (Anbieter gemäß Art. 3 Nr. 3)",
+          "title_en": "Name (Provider per Art. 3 No. 3)",
+          "description_de": "Vollständiger rechtlicher Name des Anbieters",
+          "description_en": "Full legal name of the provider"
+        },
+        "address": {
+          "type": "string",
+          "title_de": "Adresse",
+          "title_en": "Address",
+          "description_de": "Vollständige Adresse des Anbieters",
+          "description_en": "Full address of the provider"
+        },
+        "euRepresentative": {
+          "type": "string",
+          "title_de": "EU-Bevollmächtigter (falls Anbieter außerhalb EU)",
+          "title_en": "EU Authorised Representative (if provider outside EU)",
+          "description_de": "Name und Adresse des EU-Bevollmächtigten",
+          "description_en": "Name and address of the EU authorised representative"
+        },
+        "commercialRegisterNumber": {
+          "type": "string",
+          "title_de": "Handelsregister-Nummer",
+          "title_en": "Commercial Register Number",
+          "description_de": "HRB-Nummer oder äquivalent",
+          "description_en": "Commercial register number or equivalent"
+        },
+        "vatId": {
+          "type": "string",
+          "title_de": "USt-ID",
+          "title_en": "VAT ID",
+          "description_de": "Umsatzsteuer-Identifikationsnummer",
+          "description_en": "Value-added tax identification number"
+        }
+      }
+    },
+    "aiSystemIdentification": {
+      "type": "object",
+      "title_de": "2. KI-System-Identifikation",
+      "title_en": "2. AI System Identification",
+      "required": ["designation", "version"],
+      "properties": {
+        "designation": {
+          "type": "string",
+          "title_de": "Bezeichnung (Produktname)",
+          "title_en": "Designation (Product Name)",
+          "description_de": "Offizielle Produktbezeichnung",
+          "description_en": "Official product designation"
+        },
+        "tradeName": {
+          "type": "string",
+          "title_de": "Handelsname",
+          "title_en": "Trade Name",
+          "description_de": "Handelsname des KI-Systems",
+          "description_en": "Trade name of the AI system"
+        },
+        "version": {
+          "type": "string",
+          "title_de": "Version (Modell-Version)",
+          "title_en": "Version (Model Version)",
+          "description_de": "Modell- oder Software-Version",
+          "description_en": "Model or software version"
+        },
+        "modelArchitecture": {
+          "type": "string",
+          "title_de": "Modell-Architektur",
+          "title_en": "Model Architecture",
+          "description_de": "z. B. Convolutional Neural Network, Transformer, Random Forest",
+          "description_en": "e.g. Convolutional Neural Network, Transformer, Random Forest"
+        },
+        "trainingMethod": {
+          "type": "string",
+          "title_de": "Trainings-Methode",
+          "title_en": "Training Method",
+          "description_de": "z. B. Supervised Learning, Self-Supervised Learning",
+          "description_en": "e.g. Supervised Learning, Self-Supervised Learning"
+        }
+      }
+    },
+    "classification": {
+      "type": "object",
+      "title_de": "3. Klassifikation",
+      "title_en": "3. Classification",
+      "required": ["riskClass", "harmonizationLegislation"],
+      "properties": {
+        "riskClass": {
+          "type": "string",
+          "title_de": "Risikoklasse (EU AI Act)",
+          "title_en": "Risk Class (EU AI Act)",
+          "description_de": "High-Risk gemäß Anhang III Nr. 1",
+          "description_en": "High-Risk per Annex III No. 1",
+          "enum": ["High-Risk (Anhang III)", "Limited Risk", "Minimal Risk", "Unacceptable Risk"]
+        },
+        "harmonizationLegislation": {
+          "type": "string",
+          "title_de": "Harmonisierungs-Rechtsvorschrift",
+          "title_en": "Harmonization Legislation",
+          "description_de": "z. B. EU MDR 2017/745, IVDR 2017/746",
+          "description_en": "e.g. EU MDR 2017/745, IVDR 2017/746",
+          "enum": ["EU MDR 2017/745", "IVDR 2017/746", "Other"]
+        },
+        "productClass": {
+          "type": "string",
+          "title_de": "Produkt-Klasse (MDR/IVDR)",
+          "title_en": "Product Class (MDR/IVDR)",
+          "description_de": "Klasse I, IIa, IIb, III, oder IVD-Klasse A, B, C, D",
+          "description_en": "Class I, IIa, IIb, III, or IVD Class A, B, C, D",
+          "enum": ["Klasse I", "Klasse IIa", "Klasse IIb", "Klasse III", "IVD Klasse A", "IVD Klasse B", "IVD Klasse C", "IVD Klasse D"]
+        },
+        "annexIIICategory": {
+          "type": "string",
+          "title_de": "Anhang-III-Kategorie",
+          "title_en": "Annex III Category",
+          "description_de": "Sicherheitskomponente eines Medizinprodukts",
+          "description_en": "Safety component of a medical device"
+        }
+      }
+    },
+    "intendedPurpose": {
+      "type": "string",
+      "title_de": "4. Verwendungszweck",
+      "title_en": "4. Intended Purpose",
+      "description_de": "Genaue Beschreibung der Zweckbestimmung, Patientenpopulation, klinische Umgebung",
+      "description_en": "Precise description of intended purpose, patient population, clinical setting",
+      "minLength": 50
+    },
+    "conformityAssessment": {
+      "type": "object",
+      "title_de": "5. Konformitätsbewertung",
+      "title_en": "5. Conformity Assessment",
+      "required": ["procedure"],
+      "properties": {
+        "procedure": {
+          "type": "string",
+          "title_de": "Verfahren gemäß Anhang VI / VII",
+          "title_en": "Procedure per Annex VI / VII",
+          "description_de": "Internes Kontrollverfahren oder Drittstellen-Bewertung",
+          "description_en": "Internal control procedure or third-party assessment",
+          "enum": ["Anhang VI (Internes Kontrollverfahren)", "Anhang VII (Drittstellen-Bewertung)"]
+        },
+        "notifiedBody": {
+          "type": "string",
+          "title_de": "Notified Body (falls anwendbar)",
+          "title_en": "Notified Body (if applicable)",
+          "description_de": "Name + 4-stellige Kennnummer",
+          "description_en": "Name + 4-digit ID"
+        },
+        "certificates": {
+          "type": "string",
+          "title_de": "Zertifikate",
+          "title_en": "Certificates",
+          "description_de": "Certificate-Nummer, Datum, Gültigkeit",
+          "description_en": "Certificate number, date, validity"
+        },
+        "harmonizedStandards": {
+          "type": "string",
+          "title_de": "Harmonisierte Normen angewendet",
+          "title_en": "Harmonized Standards Applied",
+          "description_de": "Liste der angewendeten Normen (z. B. ISO 13485, ISO 14971, IEC 62304)",
+          "description_en": "List of standards applied (e.g. ISO 13485, ISO 14971, IEC 62304)"
+        }
+      }
+    },
+    "euDocAiAct": {
+      "type": "string",
+      "title_de": "6. EU-DoC-AI-Act",
+      "title_en": "6. EU DoC AI Act",
+      "description_de": "Verweis auf EU-Konformitätserklärung gemäß Art. 47",
+      "description_en": "Reference to EU Declaration of Conformity per Art. 47"
+    },
+    "loggingAndRecords": {
+      "type": "string",
+      "title_de": "7. Logging und Aufzeichnungen",
+      "title_en": "7. Logging and Records",
+      "description_de": "Verweis auf Logging-Mechanismen-Beschreibung gemäß Art. 12",
+      "description_en": "Reference to Logging Mechanisms Description per Art. 12"
+    },
+    "humanOversight": {
+      "type": "string",
+      "title_de": "8. Human Oversight",
+      "title_en": "8. Human Oversight",
+      "description_de": "Verweis auf Human-Oversight-Maßnahmen gemäß Art. 14",
+      "description_en": "Reference to Human Oversight Measures per Art. 14"
+    },
+    "riskManagement": {
+      "type": "string",
+      "title_de": "9. Risikomanagement",
+      "title_en": "9. Risk Management",
+      "description_de": "Verweis auf Risk-Management-System gemäß Art. 9",
+      "description_en": "Reference to Risk Management System per Art. 9"
+    },
+    "dataProtection": {
+      "type": "string",
+      "title_de": "10. Datenschutz",
+      "title_en": "10. Data Protection",
+      "description_de": "Verweis auf Data-Governance-Plan gemäß Art. 10 + DSGVO-Compliance",
+      "description_en": "Reference to Data Governance Plan per Art. 10 + GDPR Compliance"
+    },
+    "postMarketMonitoring": {
+      "type": "string",
+      "title_de": "11. Post-Market-Monitoring",
+      "title_en": "11. Post-Market Monitoring",
+      "description_de": "Verweis auf PMS-Plan + PMCF-Plan",
+      "description_en": "Reference to PMS Plan + PMCF Plan"
+    },
+    "responsiblePerson": {
+      "type": "object",
+      "title_de": "12. Verantwortliche Person",
+      "title_en": "12. Responsible Person",
+      "required": ["name", "role"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "title_de": "Name",
+          "title_en": "Name",
+          "description_de": "Verantwortliche Person gemäß Art. 25 oder Art. 26",
+          "description_en": "Responsible Person per Art. 25 or Art. 26"
+        },
+        "role": {
+          "type": "string",
+          "title_de": "Rolle",
+          "title_en": "Role",
+          "description_de": "PRRC oder Designated Person",
+          "description_en": "PRRC or Designated Person",
+          "enum": ["PRRC", "Designated Person", "Authorised Representative"]
+        },
+        "contact": {
+          "type": "string",
+          "title_de": "Kontakt",
+          "title_en": "Contact",
+          "description_de": "E-Mail + Telefon",
+          "description_en": "Email + Phone"
+        }
+      }
+    },
+    "registeredMarketPlacement": {
+      "type": "object",
+      "title_de": "13. Eingetragene Marktbereitstellung",
+      "title_en": "13. Registered Market Placement",
+      "properties": {
+        "plannedIntroduction": {
+          "type": "string",
+          "title_de": "Geplante Markteinführung in EU",
+          "title_en": "Planned EU Market Introduction",
+          "description_de": "Datum der geplanten Markteinführung",
+          "description_en": "Date of planned market introduction",
+          "format": "date"
+        },
+        "affectedMemberStates": {
+          "type": "string",
+          "title_de": "Betroffene EU-Mitgliedstaaten",
+          "title_en": "Affected EU Member States",
+          "description_de": "Liste oder \"alle\"",
+          "description_en": "List or \"all\""
+        },
+        "plannedEndOfMarketing": {
+          "type": "string",
+          "title_de": "Geplantes Vermarktungsende",
+          "title_en": "Planned End of Marketing",
+          "description_de": "Datum, falls bekannt",
+          "description_en": "Date, if known",
+          "format": "date"
+        }
+      }
+    },
+    "attachedDocuments": {
+      "type": "object",
+      "title_de": "14. Beigefügte Dokumente",
+      "title_en": "14. Attached Documents",
+      "description_de": "Prüfliste — alle zutreffenden Dokumente anhaken",
+      "description_en": "Checklist — check all applicable documents",
+      "properties": {
+        "providerInformation": {
+          "type": "boolean",
+          "title_de": "Anbieter-Information",
+          "title_en": "Provider Information",
+          "default": false
+        },
+        "aiSystemIdentification": {
+          "type": "boolean",
+          "title_de": "KI-System-Identifikation",
+          "title_en": "AI System Identification",
+          "default": false
+        },
+        "classificationJustification": {
+          "type": "boolean",
+          "title_de": "Klassifikations-Begründung",
+          "title_en": "Classification Justification",
+          "default": false
+        },
+        "conformityAssessmentDocument": {
+          "type": "boolean",
+          "title_de": "Konformitätsbewertungs-Dokument",
+          "title_en": "Conformity Assessment Document",
+          "default": false
+        },
+        "euDocAiAct": {
+          "type": "boolean",
+          "title_de": "EU-DoC-AI-Act",
+          "title_en": "EU DoC AI Act",
+          "default": false
+        },
+        "loggingDescription": {
+          "type": "boolean",
+          "title_de": "Logging-Beschreibung",
+          "title_en": "Logging Description",
+          "default": false
+        },
+        "humanOversightMeasures": {
+          "type": "boolean",
+          "title_de": "Human-Oversight-Maßnahmen",
+          "title_en": "Human Oversight Measures",
+          "default": false
+        },
+        "riskManagementSummary": {
+          "type": "boolean",
+          "title_de": "Risk-Management-Summary",
+          "title_en": "Risk Management Summary",
+          "default": false
+        },
+        "dataGovernancePlan": {
+          "type": "boolean",
+          "title_de": "Data-Governance-Plan",
+          "title_en": "Data Governance Plan",
+          "default": false
+        },
+        "pmsPlan": {
+          "type": "boolean",
+          "title_de": "PMS-Plan",
+          "title_en": "PMS Plan",
+          "default": false
+        }
+      }
+    },
+    "submissionDate": {
+      "type": "string",
+      "title_de": "Submission-Datum",
+      "title_en": "Submission Date",
+      "format": "date-time"
+    },
+    "submissionConfirmationId": {
+      "type": "string",
+      "title_de": "Submission-Confirmation-ID",
+      "title_en": "Submission Confirmation ID",
+      "description_de": "EU-Registration-Code nach erfolgreicher Einreichung",
+      "description_en": "EU Registration Code after successful submission"
+    },
+    "registrationSubmissionUrl": {
+      "type": "string",
+      "title_de": "Registrierungs-Submission-URL",
+      "title_en": "Registration Submission URL",
+      "default": "https://digital-strategy.ec.europa.eu/en/policies/ai-act-implementation",
+      "format": "uri"
+    }
+  }
+}

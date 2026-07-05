@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -18,6 +19,7 @@ interface HeaderProps {
 
 export function Header({ onSearch }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const { language, setLanguage, t } = useLanguage();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,8 +33,8 @@ export function Header({ onSearch }: HeaderProps) {
           {/* Left: DELTAWAYS Brand */}
           <div className="flex items-center space-x-4">
             <div className="flex-shrink-0 flex items-center space-x-3">
-              <Badge 
-                variant="outline" 
+              <Badge
+                variant="outline"
                 className="bg-blue-50 text-blue-700 border-blue-200 font-semibold px-3 py-1 deltaways-brand-text"
               >
                 📊 Deltaways
@@ -40,58 +42,61 @@ export function Header({ onSearch }: HeaderProps) {
               <span className="text-sm font-medium text-gray-600">Helix Platform</span>
             </div>
           </div>
-          
+
           {/* Right: Actions & User Menu */}
           <div className="flex items-center space-x-3">
-            {/* Language Selector */}
-            <Select defaultValue="de">
-              <SelectTrigger className="w-24 h-8 text-xs border-gray-300">
+            {/* Language Selector — an LanguageContext angebunden (Bug-Fix) */}
+            <Select value={language} onValueChange={(val) => setLanguage(val as 'de' | 'en')}>
+              <SelectTrigger
+                className="w-24 h-8 text-xs border-gray-300"
+                data-testid="header-language-selector"
+                aria-label={t('common.language')}
+              >
                 <Globe className="w-3 h-3 mr-1" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="de">DE</SelectItem>
                 <SelectItem value="en">EN</SelectItem>
-                <SelectItem value="fr">FR</SelectItem>
               </SelectContent>
             </Select>
 
             {/* Tenant Login Button */}
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="deltaways-button-primary text-xs px-3 py-1 h-8"
             >
               <LogIn className="w-3 h-3 mr-1" />
-              Tenant Login
+              {t('sidebar.tenantLogin')}
             </Button>
 
             {/* Customer Area Button */}
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="deltaways-button-primary text-xs px-3 py-1 h-8"
             >
               <UserCheck className="w-3 h-3 mr-1" />
-              Customer Area
+              {t('sidebar.customerArea')}
             </Button>
 
             {/* Chat Button */}
             <Button variant="ghost" size="sm" className="relative p-2 h-8 w-8">
               <MessageSquare className="h-4 w-4 text-blue-600" />
             </Button>
-            
+
             {/* Notifications */}
             <Button variant="ghost" size="sm" className="relative p-2 h-8 w-8">
               <Bell className="h-4 w-4 text-gray-400" />
-              <Badge 
-                variant="destructive" 
+              <Badge
+                variant="destructive"
                 className="absolute -top-1 -right-1 h-3 w-3 p-0 flex items-center justify-center text-xs"
               >
                 3
               </Badge>
             </Button>
-            
+
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -106,9 +111,9 @@ export function Header({ onSearch }: HeaderProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>Profile</DropdownMenuItem>
-                <DropdownMenuItem>Settings</DropdownMenuItem>
-                <DropdownMenuItem>Logout</DropdownMenuItem>
+                <DropdownMenuItem>{t('sidebar.profile')}</DropdownMenuItem>
+                <DropdownMenuItem>{t('sidebar.settings')}</DropdownMenuItem>
+                <DropdownMenuItem>{t('sidebar.signOut')}</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

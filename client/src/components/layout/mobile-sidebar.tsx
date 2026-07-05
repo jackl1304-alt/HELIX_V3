@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { 
-  BarChart3, 
-  Database, 
+import {
+  BarChart3,
+  Database,
   Globe,
-  FileText, 
-  Newspaper, 
-  CheckCircle, 
+  FileText,
+  Newspaper,
+  CheckCircle,
   TrendingUp,
   Brain,
   Book,
@@ -15,83 +15,97 @@ import {
   Settings,
   Archive,
   Menu,
-  X,
   Scale,
-  Activity,
-  Mail
+  Mail,
+  Shield,
+  FileSearch,
+  ClipboardList,
+  Search,
+  Target,
+  Sparkles,
+  Building
 } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-// import logoPath from "@assets/ICON Helix_1753735921077.jpg";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 
-const navigation = [
+interface NavItem {
+  name: string;
+  href: string;
+  icon: any;
+}
+
+// Customer-friendly grouped navigation (mirrors sidebar.tsx structure)
+const getNavigationGroups = (t: (key: string) => string): Array<{ label: string; items: NavItem[] }> => [
   {
-    name: "Dashboard",
-    href: "/",
-    icon: BarChart3,
-    description: "Übersicht und KPIs"
+    label: t('nav.sections.overview'),
+    items: [
+      { name: t('nav.dashboard'), href: "/", icon: BarChart3 },
+      { name: t('nav.analytics'), href: "/analytics", icon: TrendingUp },
+      { name: t('nav.aiInsights'), href: "/ai-insights", icon: Sparkles }
+    ]
   },
   {
-    name: "Datensammlung",
-    href: "/data-collection",
-    icon: Database,
-    description: "Automatisierte Datenerfassung"
+    label: t('nav.sections.compliance'),
+    items: [
+      { name: t('nav.regulatoryUpdates'), href: "/regulatory-updates", icon: FileText },
+      { name: t('nav.legalCases'), href: "/legal-cases", icon: Scale },
+      { name: t('nav.globalSources'), href: "/global-sources", icon: Globe },
+      { name: t('nav.knowledgeBase'), href: "/knowledge-base", icon: Book },
+      { name: t('nav.regulatoryAssistant'), href: "/assistent/regulatory", icon: Brain }
+    ]
   },
   {
-    name: "Globale Quellen",
-    href: "/global-sources",
-    icon: Globe,
-    description: "Weltweite Regulierungsquellen"
+    label: t('nav.sections.approvals'),
+    items: [
+      { name: t('nav.globalApprovals'), href: "/zulassungen/global", icon: Globe },
+      { name: t('nav.ongoingApprovals'), href: "/zulassungen/laufende", icon: CheckCircle },
+      { name: t('nav.approvalAssistant'), href: "/assistent/zulassungen", icon: Brain }
+    ]
   },
   {
-    name: "Analytics",
-    href: "/analytics",
-    icon: BarChart3,
-    description: "Datenanalyse und Berichte"
+    label: t('nav.sections.projects'),
+    items: [
+      { name: t('nav.projectOverview'), href: "/customer-area-3/projects", icon: Target },
+      { name: t('nav.newProject'), href: "/customer-area-3/new-project", icon: FileText },
+      { name: t('nav.formAssistant'), href: "/customer-area-3/form-assistant", icon: ClipboardList },
+      { name: t('nav.globalPatents'), href: "/patents", icon: Globe },
+      { name: t('nav.patentSearch'), href: "/patents-search", icon: Search },
+      { name: t('nav.projectAssistant'), href: "/assistent/projekte", icon: Brain }
+    ]
   },
   {
-    name: "Regulierungs-Updates",
-    href: "/regulatory-updates",
-    icon: FileText,
-    description: "Aktuelle Änderungen"
+    label: t('nav.sections.standards'),
+    items: [
+      { name: t('nav.standards.iso'), href: "/iso-standards", icon: Shield },
+      { name: t('nav.standards.iec'), href: "/iec-standards", icon: Shield },
+      { name: t('nav.standards.astm'), href: "/astm-standards", icon: FileSearch },
+      { name: t('nav.standards.en'), href: "/en-standards", icon: Globe },
+      { name: t('nav.standards.aami'), href: "/aami-standards", icon: CheckCircle },
+      { name: t('nav.standards.mdr'), href: "/eu-mdr", icon: Scale }
+    ]
   },
   {
-    name: "Newsletter-Manager",
-    href: "/newsletter-manager",
-    icon: Mail,
-    description: "Newsletter-Verwaltung"
-  },
-  {
-    name: "Historische Daten",
-    href: "/historical-data",
-    icon: Archive,
-    description: "Archivierte Dokumente"
-  },
-  {
-    name: "Rechtsfälle",
-    href: "/legal-cases",
-    icon: Scale,
-    description: "Jurisprudenz-Datenbank"
-  },
-  {
-    name: "Knowledge Base",
-    href: "/knowledge-base",
-    icon: Book,
-    description: "Wissensdatenbank"
-  },
-  {
-    name: "Benutzerverwaltung",
-    href: "/user-management",
-    icon: Users,
-    description: "Nutzer & Berechtigungen"
-  },
-  {
-    name: "Systemeinstellungen",
-    href: "/system-settings",
-    icon: Settings,
-    description: "Konfiguration"
+    label: t('nav.sections.advanced'),
+    items: [
+      { name: t('nav.dataSourcesDetails'), href: "/admin/data-sources-details", icon: Database },
+      { name: t('nav.dataCollection'), href: "/data-collection", icon: Database },
+      { name: t('nav.newsletterAdmin'), href: "/newsletter-admin", icon: Mail },
+      { name: t('nav.emailManagement'), href: "/email-management", icon: Mail },
+      { name: t('nav.syncManager'), href: "/sync-manager", icon: Database },
+      { name: t('nav.newsletterManager'), href: "/newsletter-manager", icon: Newspaper },
+      { name: t('nav.historicalData'), href: "/historical-data", icon: Archive },
+      { name: t('nav.customerManagement'), href: "/admin-customers", icon: Building },
+      { name: t('nav.userManagement'), href: "/user-management", icon: Users },
+      { name: t('nav.systemAdmin'), href: "/administration", icon: Settings }
+    ]
   }
 ];
 
@@ -100,26 +114,7 @@ export function MobileSidebar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [location] = useLocation();
   const { t } = useLanguage();
-
-  const renderNavItem = (item: any, isActive: boolean, onClose?: () => void) => (
-    <Link key={item.name} href={item.href}>
-      <div
-        className={cn(
-          "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors cursor-pointer",
-          isActive
-            ? "text-blue-600 bg-blue-50 border border-blue-200"
-            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-        )}
-        onClick={onClose}
-      >
-        <item.icon className={cn(
-          "mr-3 h-5 w-5",
-          isActive ? "text-blue-600" : "text-gray-400"
-        )} />
-        {item.name}
-      </div>
-    </Link>
-  );
+  const navigationGroups = getNavigationGroups(t);
 
   return (
     <>
@@ -127,68 +122,76 @@ export function MobileSidebar() {
       <div className="sticky top-0 z-40 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
         <Link href="/">
           <div className="flex flex-col items-center cursor-pointer">
-            <Activity className="h-10 w-10 text-blue-600" />
-            <span className="text-xs font-medium text-gray-700 mt-1">Helix</span>
+            <img
+              src="/helix-logo.jpg"
+              alt="HELIX"
+              className="h-12 w-12 object-contain"
+            />
+            <span className="text-xs font-medium text-gray-700 mt-1">{t('sidebar.brandName')}</span>
           </div>
         </Link>
-        
+
         <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" aria-label={t('sidebar.openMenu')}>
               <Menu className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          
-          <DropdownMenuContent 
-            align="end" 
+
+          <DropdownMenuContent
+            align="end"
             className="w-80 max-h-[80vh] overflow-y-auto"
             sideOffset={8}
           >
             {/* Header */}
             <div className="p-4 border-b border-gray-200">
               <div className="flex flex-col items-center">
-                <Activity className="h-12 w-12 text-blue-600 mb-2" />
-                <div className="text-sm font-medium text-gray-700">MedTech Intelligence</div>
+                <img
+                  src="/helix-logo.jpg"
+                  alt="HELIX"
+                  className="h-16 w-16 object-contain mb-2"
+                />
+                <div className="text-sm font-medium text-gray-700">{t('sidebar.brandSubtitle')}</div>
               </div>
             </div>
 
-            {/* Main Navigation */}
-            <DropdownMenuLabel className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-              Hauptmodule
-            </DropdownMenuLabel>
-            {navigation.map((item) => {
-              const isActive = location === item.href;
-              return (
-                <Link key={item.name} href={item.href}>
-                  <DropdownMenuItem 
-                    className={cn(
-                      "flex items-center px-4 py-3 cursor-pointer",
-                      isActive && "bg-blue-50 text-blue-600"
-                    )}
-                    onClick={() => setDropdownOpen(false)}
-                  >
-                    <item.icon className={cn(
-                      "mr-3 h-4 w-4",
-                      isActive ? "text-blue-600" : "text-gray-400"
-                    )} />
-                    {item.name}
-                  </DropdownMenuItem>
-                </Link>
-              );
-            })}
+            {/* Grouped Navigation */}
+            {navigationGroups.map((group, idx) => (
+              <div key={group.label}>
+                {idx > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuLabel className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  {group.label}
+                </DropdownMenuLabel>
+                {group.items.map((item) => {
+                  const isActive = location === item.href;
+                  return (
+                    <Link key={item.href} href={item.href}>
+                      <DropdownMenuItem
+                        className={cn(
+                          "flex items-center px-4 py-3 cursor-pointer",
+                          isActive && "bg-blue-50 text-blue-600"
+                        )}
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        <item.icon
+                          className={cn(
+                            "mr-3 h-4 w-4",
+                            isActive ? "text-blue-600" : "text-gray-400"
+                          )}
+                        />
+                        {item.name}
+                      </DropdownMenuItem>
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
 
-            <DropdownMenuSeparator />
-            
-            <DropdownMenuLabel className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-              Weitere Optionen
-            </DropdownMenuLabel>
-
-            {/* Footer */}
             <DropdownMenuSeparator />
             <div className="p-3 text-center">
               <div className="text-xs text-gray-500">
-                <div className="font-medium">Helix Platform v2.0</div>
-                <div className="mt-1">© 2025 MedTech Intelligence</div>
+                <div className="font-medium">{t('sidebar.footerVersion')}</div>
+                <div className="mt-1">{t('sidebar.footerCopyright')}</div>
               </div>
             </div>
           </DropdownMenuContent>

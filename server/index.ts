@@ -1,10 +1,12 @@
 import 'dotenv/config';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import net from 'net';
 
 import express, { type Request, type Response, type NextFunction } from "express";
 import { createServer } from "http";
 import cors from "cors";
+import helmet from "helmet";
 import { registerRoutes } from "./routes.js";
 import { db, dbDriver, pool } from './db.js';
 import { setupVite, serveStatic } from "./vite.js";
@@ -20,30 +22,103 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 const PORT = parseInt(process.env.PORT || '5000', 10);
 const HOST = '0.0.0.0'; // Generic container/host deployment
 
-console.log(`🚀 HELIX Regulatory Informationsplattform`);
-console.log(`📍 Environment: ${isDevelopment ? 'development' : 'production'}`);
-console.log(`🔗 Binding to: ${HOST}:${PORT}`);
+// Trust proxy configuration
+// IMPORTANT: Only enable trust proxy when sitting behind Cloudflare (or other known reverse proxy).
+// Setting this without an explicit list is a security issue — any client can spoof X-Forwarded-For.
+// TRUSTED_PROXIES can be:
+//   - "true"  → trust all proxies (DEV ONLY, do not use in production behind CF)
+//   - "false" → no proxy trust
+//   - number  → trust n hops from the connection
+//   - comma-separated IPs/CIDRs → trust specific addresses (recommended behind CF)
+const trustedProxiesEnv = process.env.TRUSTED_PROXIES ?? 'false';
+let trustProxyValue: boolean | number | string[] = false;
+if (trustedProxiesEnv === 'true') {
+  trustProxyValue = true;
+  console.warn('⚠️  trust proxy = true → spoofable X-Forwarded-For; DEV only');
+} else if (trustedProxiesEnv === 'false') {
+  trustProxyValue = false;
+} else if (/^\d+$/.test(trustedProxiesEnv)) {
+  trustProxyValue = parseInt(trustedProxiesEnv, 10);
+} else {
+  // Validate each CIDR/IP entry; throw on bad input so we don't silently trust anything.
+  const parsedEntries = trustedProxiesEnv.split(',').map(s => s.trim()).filter(Boolean);
+  const validated: string[] = [];
+  for (const entry of parsedEntries) {
+    let ok = net.isIP(entry) !== 0;
+    if (!ok && entry.includes('/')) {
+      const [ip, mask] = entry.split('/');
+      const maskNum = mask !== undefined ? parseInt(mask, 10) : -1;
+      ok = net.isIP(ip) !== 0 && Number.isFinite(maskNum) && maskNum >= 0 && maskNum <= 128;
+    }
+    if (!ok) throw new Error(`Invalid TRUSTED_PROXIES entry: "${entry}" — must be IP or CIDR`);
+    validated.push(entry);
+  }
+  trustProxyValue = validated;
+}
+app.set('trust proxy', trustProxyValue);
+console.log(`🛡️  trust proxy configured: ${trustedProxiesEnv}`);
 
-// Enhanced CORS for production
+// CORS allowlist — sourced from ALLOWED_ORIGINS env (comma-separated). Wildcards supported:
+//   - https://helix.example.com         (exact)
+//   - https://*.example.com             (single-label subdomain wildcard; multi-level NOT matched)
+// Note: '*' is interpreted as "exactly one subdomain label" matching [a-z0-9-]+.
+// To match deeper levels, list multiple entries explicitly: https://*.eu.deltaways.de, etc.
+const rawOrigins = (process.env.ALLOWED_ORIGINS ?? (isDevelopment
+  ? 'http://localhost:5173,http://localhost:5000,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:5000'
+  : 'https://helix.deltaways.de,https://regulatory.deltaways.de,https://*.deltaways.de'
+)).split(',').map(s => s.trim()).filter(Boolean);
+
+const corsOrigins: (string | RegExp)[] = rawOrigins.map(o => {
+  if (o.includes('*')) {
+    // Escape regex-relevant chars but keep * as wildcard for the leading subdomain label
+    const pattern = '^' + o
+      .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/\*/g, '[a-z0-9-]+');
+    return new RegExp(pattern, 'i');
+  }
+  return o;
+});
+
+console.log(`🌐 CORS origins: ${rawOrigins.join(', ')}`);
+
 app.use(cors({
-  origin: isDevelopment ? true : [
-    'https://helix.deltaways.de',
-    'https://regulatory.deltaways.de',
-    /\.deltaways\.de$/
-  ],
+  origin: (origin, cb) => {
+    // Same-origin / curl / no Origin header → allow
+    if (!origin) return cb(null, true);
+    const allowed = corsOrigins.some(o => typeof o === 'string' ? o === origin : o.test(origin));
+    if (allowed) return cb(null, true);
+    return cb(new Error(`Origin ${origin} not allowed by CORS`));
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'X-Requested-With', 'X-Forwarded-For'],
+  maxAge: 86400, // cache preflight for 24h
 }));
 
-// Enhanced security headers
+// Helmet — opt-in security headers (CSP is intentionally relaxed here; nginx sets the strict CSP in production)
+app.use(helmet({
+  contentSecurityPolicy: false,        // CSP handled by nginx (single source of truth)
+  crossOriginEmbedderPolicy: false,    // React SPA breaks under COEP
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  hsts: isDevelopment ? false : { maxAge: 63072000, includeSubDomains: true, preload: true },
+  noSniff: true,
+  frameguard: { action: 'deny' },       // X-Frame-Options DENY: tighter than SAMEORIGIN
+  xssFilter: true,
+}));
+
+// Additional defense-in-depth security headers (helmet handles most of these; we add what nginx doesn't)
 app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  if (!isDevelopment) {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  // Permissions-Policy: disable unused powerful browser APIs
+  if (!res.getHeader('Permissions-Policy')) {
+    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=()');
   }
+  // Cross-Origin-Opener-Policy: isolates browsing context
+  if (!res.getHeader('Cross-Origin-Opener-Policy')) {
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  }
+  // Real client IP is logged — comes from req.ip which is restored via real_ip_header in nginx
+  res.locals.clientIp = req.ip || req.socket.remoteAddress || 'unknown';
   next();
 });
 

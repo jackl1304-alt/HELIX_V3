@@ -14,7 +14,6 @@ import {
   BarChart3,
   Settings,
   Building,
-  Activity,
   Globe,
   Database,
   Users,
@@ -23,7 +22,15 @@ import {
   Search,
   Brain,
   LogOut,
-  MessageCircle
+  MessageCircle,
+  TrendingUp,
+  CheckCircle,
+  Archive,
+  RefreshCw,
+  Sparkles,
+  ClipboardList,
+  Target,
+  Newspaper
 } from "@/components/icons";
 
 // Customer permissions interface
@@ -44,6 +51,11 @@ interface CustomerPermissions {
   auditLogs: boolean;
   aiInsights: boolean;
   advancedAnalytics: boolean;
+  globalApprovals: boolean;
+  ongoingApprovals: boolean;
+  syncManager: boolean;
+  projects: boolean;
+  patents: boolean;
 }
 
 // Navigation item interface
@@ -55,91 +67,217 @@ interface NavigationItem {
   description?: string;
 }
 
-// All possible navigation items with German names
-const ALL_NAVIGATION_ITEMS: NavigationItem[] = [
+interface NavGroup {
+  label: string;
+  items: NavigationItem[];
+}
+
+// Customer-friendly grouped navigation (mirrors sidebar.tsx structure)
+const getAllNavigationGroups = (t: (key: string) => string): NavGroup[] => [
   {
-    name: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-    permission: "dashboard",
-    description: "Übersicht und aktuelle Statistiken"
+    label: t('nav.sections.overview'),
+    items: [
+      {
+        name: t('customer.dashboard'),
+        href: "/dashboard",
+        icon: LayoutDashboard,
+        permission: "dashboard",
+        description: t('dashboard.welcomeBack')
+      },
+      {
+        name: t('nav.analytics'),
+        href: "/analytics",
+        icon: BarChart3,
+        permission: "analytics",
+        description: t('analytics.subtitle')
+      },
+      {
+        name: t('nav.aiInsights'),
+        href: "/ai-insights",
+        icon: Sparkles,
+        permission: "aiInsights",
+        description: t('nav.aiInsights')
+      }
+    ]
   },
   {
-    name: "Regulatorische Updates",
-    href: "/regulatory-updates",
-    icon: FileText,
-    permission: "regulatoryUpdates",
-    description: "Aktuelle regulatorische Änderungen"
+    label: t('nav.sections.compliance'),
+    items: [
+      {
+        name: t('nav.regulatoryUpdates'),
+        href: "/regulatory-updates",
+        icon: FileText,
+        permission: "regulatoryUpdates",
+        description: t('regulatory.subtitle')
+      },
+      {
+        name: t('nav.legalCases'),
+        href: "/legal-cases",
+        icon: Scale,
+        permission: "legalCases",
+        description: t('legal.subtitle')
+      },
+      {
+        name: t('nav.globalSources'),
+        href: "/global-sources",
+        icon: Globe,
+        permission: "globalSources",
+        description: t('sidebar.dataSources')
+      },
+      {
+        name: t('nav.knowledgeBase'),
+        href: "/knowledge-base",
+        icon: BookOpen,
+        permission: "knowledgeBase",
+        description: t('knowledge.subtitle')
+      },
+      {
+        name: t('nav.regulatoryAssistant'),
+        href: "/assistent/regulatory",
+        icon: Brain,
+        permission: "aiInsights",
+        description: t('nav.regulatoryAssistant')
+      }
+    ]
   },
   {
-    name: "Rechtsprechung",
-    href: "/legal-cases",
-    icon: Scale,
-    permission: "legalCases",
-    description: "Rechtsprechung und Präzedenzfälle"
+    label: t('nav.sections.approvals'),
+    items: [
+      {
+        name: t('nav.globalApprovals'),
+        href: "/zulassungen/global",
+        icon: Globe,
+        permission: "globalApprovals",
+        description: t('nav.globalApprovals')
+      },
+      {
+        name: t('nav.ongoingApprovals'),
+        href: "/zulassungen/laufende",
+        icon: CheckCircle,
+        permission: "ongoingApprovals",
+        description: t('nav.ongoingApprovals')
+      },
+      {
+        name: t('nav.approvalAssistant'),
+        href: "/assistent/zulassungen",
+        icon: Brain,
+        permission: "aiInsights",
+        description: t('nav.approvalAssistant')
+      }
+    ]
   },
   {
-    name: "Wissensdatenbank",
-    href: "/knowledge-base",
-    icon: BookOpen,
-    permission: "knowledgeBase",
-    description: "Wissensdatenbank und Artikel"
+    label: t('nav.sections.projects'),
+    items: [
+      {
+        name: t('nav.projectOverview'),
+        href: "/customer-area-3/projects",
+        icon: Target,
+        permission: "projects",
+        description: t('nav.projectOverview')
+      },
+      {
+        name: t('nav.newProject'),
+        href: "/customer-area-3/new-project",
+        icon: FileText,
+        permission: "projects",
+        description: t('nav.newProject')
+      },
+      {
+        name: t('nav.projectMDR'),
+        href: "/customer-area-3/projektakte",
+        icon: Archive,
+        permission: "projects",
+        description: t('nav.projectMDR')
+      },
+      {
+        name: t('nav.formAssistant'),
+        href: "/customer-area-3/form-assistant",
+        icon: ClipboardList,
+        permission: "projects",
+        description: t('nav.formAssistant')
+      },
+      {
+        name: t('nav.globalPatents'),
+        href: "/patents",
+        icon: Globe,
+        permission: "patents",
+        description: t('nav.globalPatents')
+      },
+      {
+        name: t('nav.patentSearch'),
+        href: "/patents-search",
+        icon: Search,
+        permission: "patents",
+        description: t('nav.patentSearch')
+      },
+      {
+        name: t('nav.projectAssistant'),
+        href: "/assistent/projekte",
+        icon: Brain,
+        permission: "aiInsights",
+        description: t('nav.projectAssistant')
+      }
+    ]
   },
   {
-    name: "Newsletter",
-    href: "/newsletters",
-    icon: Mail,
-    permission: "newsletters",
-    description: "Newsletter-Verwaltung"
+    label: t('nav.sections.dataManagement'),
+    items: [
+      {
+        name: t('nav.dataCollection'),
+        href: "/data-collection",
+        icon: Database,
+        permission: "dataCollection",
+        description: t('dataCollection.subtitle')
+      },
+      {
+        name: t('nav.syncManager'),
+        href: "/sync-manager",
+        icon: RefreshCw,
+        permission: "syncManager",
+        description: t('nav.syncManager')
+      },
+      {
+        name: t('nav.newsletterManager'),
+        href: "/newsletter-manager",
+        icon: Newspaper,
+        permission: "newsletters",
+        description: t('nav.newsletterManager')
+      },
+      {
+        name: t('nav.historicalData'),
+        href: "/historical-data",
+        icon: Archive,
+        permission: "historicalData",
+        description: t('nav.historicalData')
+      }
+    ]
   },
   {
-    name: "Analytics",
-    href: "/analytics",
-    icon: BarChart3,
-    permission: "analytics",
-    description: "Datenanalyse und Berichte"
-  },
-  {
-    name: "Erweiterte Analytics", 
-    href: "/advanced-analytics",
-    icon: Activity,
-    permission: "advancedAnalytics",
-    description: "Erweiterte Analysetools"
-  },
-  {
-    name: "KI-Erkenntnisse",
-    href: "/ai-insights",
-    icon: Brain,
-    permission: "aiInsights",
-    description: "KI-gestützte Erkenntnisse"
-  },
-  {
-    name: "Globale Datenquellen",
-    href: "/global-sources",
-    icon: Globe,
-    permission: "globalSources",
-    description: "Globale Datenquellen"
-  },
-  {
-    name: "Datensammlung",
-    href: "/data-collection", 
-    icon: Database,
-    permission: "dataCollection",
-    description: "Datensammlung und -verwaltung"
-  },
-  {
-    name: "Historische Daten",
-    href: "/historical-data",
-    icon: Clipboard,
-    permission: "historicalData",
-    description: "Historische Datenanalyse"
-  },
-  {
-    name: "Einstellungen",
-    href: "/settings",
-    icon: Settings,
-    permission: "systemSettings",
-    description: "Kundeneinstellungen"
+    label: t('nav.sections.advanced'),
+    items: [
+      {
+        name: t('nav.advancedAnalysis'),
+        href: "/advanced-analytics",
+        icon: TrendingUp,
+        permission: "advancedAnalytics",
+        description: t('nav.advancedAnalysis')
+      },
+      {
+        name: t('nav.userManagement'),
+        href: "/user-management",
+        icon: Users,
+        permission: "userManagement",
+        description: t('nav.userManagement')
+      },
+      {
+        name: t('nav.auditLogs'),
+        href: "/audit-logs",
+        icon: Shield,
+        permission: "auditLogs",
+        description: t('nav.auditLogs')
+      }
+    ]
   }
 ];
 
@@ -155,7 +293,8 @@ export default function CustomerNavigation({ permissions, tenantName, onPermissi
   const params = useParams();
   const [currentPermissions, setCurrentPermissions] = useState(permissions);
   const { logout } = useAuth();
-  
+  const { t } = useLanguage();
+
   // Build tenant-specific URLs
   const buildTenantUrl = (path: string) => {
     if (params.tenantId) {
@@ -167,7 +306,7 @@ export default function CustomerNavigation({ permissions, tenantName, onPermissi
   // Polling für Live-Updates der Berechtigungen
   useEffect(() => {
     if (!params.tenantId) return;
-    
+
     const pollPermissions = async () => {
       try {
         const response = await fetch(`/api/customer/tenant/${params.tenantId}`);
@@ -185,24 +324,20 @@ export default function CustomerNavigation({ permissions, tenantName, onPermissi
 
     // Initial load
     pollPermissions();
-    
+
     // Poll alle 5 Sekunden für Live-Updates
     const interval = setInterval(pollPermissions, 5000);
-    
+
     return () => clearInterval(interval);
   }, [params.tenantId, onPermissionsUpdate]);
 
-  // Filter navigation items based on current permissions
-  const allowedItems = ALL_NAVIGATION_ITEMS.filter(item => 
-    currentPermissions[item.permission]
-  );
-
+  const navigationGroups = getAllNavigationGroups(t);
 
   const renderNavigationItem = (item: NavigationItem) => {
     const tenantUrl = buildTenantUrl(item.href);
     const isActive = location === tenantUrl || location === item.href;
     const IconComponent = item.icon;
-    
+
     return (
       <button
         key={item.href}
@@ -233,62 +368,89 @@ export default function CustomerNavigation({ permissions, tenantName, onPermissi
     );
   };
 
+  // Filter groups: only show groups with at least one permitted item
+  const allowedGroups = navigationGroups
+    .map(group => ({
+      ...group,
+      items: group.items.filter(item => currentPermissions[item.permission])
+    }))
+    .filter(group => group.items.length > 0);
+
   return (
     <div className="fixed left-0 top-0 h-screen w-64 flex flex-col bg-white border-r border-gray-200 shadow-lg z-50">
       {/* Header */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 via-purple-600 to-cyan-700 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-            {tenantName?.charAt(0) || 'H'}
+          <div className="w-10 h-10 flex items-center justify-center">
+            <img
+              src="/helix-logo.jpg"
+              alt="HELIX"
+              className="w-10 h-10 object-contain"
+            />
           </div>
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              {tenantName || "Customer Portal"}
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold text-gray-900 truncate">
+              {tenantName || t('sidebar.customerPortal')}
             </h2>
-            <p className="text-sm text-gray-500">Regulatory Intelligence</p>
+            <p className="text-sm text-gray-500">{t('sidebar.brandSubtitle')}</p>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-        {allowedItems.length > 0 ? (
-          allowedItems.map(renderNavigationItem)
+      <nav className="flex-1 px-4 py-6 space-y-4 overflow-y-auto">
+        {allowedGroups.length > 0 ? (
+          allowedGroups.map((group) => (
+            <div key={group.label} className="space-y-1">
+              <div className="px-4 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                {group.label}
+              </div>
+              <div className="space-y-1">
+                {group.items.map(renderNavigationItem)}
+              </div>
+            </div>
+          ))
         ) : (
           <div className="text-center py-8">
             <Shield className="w-12 h-12 mx-auto text-gray-400 mb-3" />
             <p className="text-sm text-gray-500">
-              Keine Berechtigung für Navigation
+              {t('access.noPermission')}
+            </p>
+            <p className="text-xs text-gray-400 mt-2">
+              {t('access.contactAdmin')}
             </p>
           </div>
         )}
       </nav>
 
-      {/* Footer with Logout and Chat */}
+      {/* Footer with Language Selector, Logout and Chat */}
       <div className="p-4 border-t border-gray-200 bg-gray-50 space-y-2">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="w-full" 
+        <div className="flex justify-center">
+          <LanguageSelector />
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
           onClick={() => window.open('/chat-support', '_blank')}
         >
           <MessageCircle className="w-4 h-4 mr-2" />
-          Support Chat
+          {t('sidebar.supportChat')}
         </Button>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="w-full text-red-600 hover:text-red-700 hover:bg-red-50" 
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
           onClick={() => {
             logout();
             window.location.reload();
           }}
         >
           <LogOut className="w-4 h-4 mr-2" />
-          Abmelden
+          {t('sidebar.signOut')}
         </Button>
         <p className="text-xs text-gray-500 text-center mt-2">
-          Powered by Helix Platform
+          {t('sidebar.poweredBy')}
         </p>
       </div>
     </div>

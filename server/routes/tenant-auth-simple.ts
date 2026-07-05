@@ -1,5 +1,6 @@
 import express from 'express';
 import { sql } from '../db-connection';
+import { redactError } from '../utils/redact';
 
 const router = express.Router();
 
@@ -8,7 +9,9 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    console.log('[TENANT AUTH] Login attempt:', { email, password });
+    // SECURITY: never log plaintext credentials. Email only; password is used below
+    // for verification and never reaches any log / telemetry / error-report sink.
+    console.log('[TENANT AUTH] Login attempt:', email);
 
     if (!email || !password) {
       return res.status(400).json({ 
@@ -47,7 +50,7 @@ router.post('/login', async (req, res) => {
       `;
 
       user = userResult[0];
-      console.log('[TENANT AUTH] User found:', user ? 'Yes' : 'No');
+      // SECURITY: do not log a yes/no user-found indicator (enables user enumeration).
 
       if (!user) {
         return res.status(401).json({ 
@@ -56,17 +59,23 @@ router.post('/login', async (req, res) => {
       }
     }
 
-    // Verify password
+    // Verify password.
+    // SECURITY: this route historically accepted `password === 'demo123'` for ANY
+    // email — an authentication bypass. In production we now hard-lock non-demo
+    // credentials to `false` so that no future edit can re-open the bypass path.
+    // Production authentication MUST go through server/routes/tenant-auth.ts (bcrypt).
     let validPassword = false;
-    
     if (email === 'admin@demo-medical.local') {
       validPassword = password === 'demo123';
+    } else if (process.env.NODE_ENV === 'production') {
+      // PRODUCTION HARD LOCK: refuse all non-demo credentials outright.
+      validPassword = false;
     } else {
-      // For real users, check actual password (simplified for demo)
+      // Dev-only fallback kept for local demo flow.
       validPassword = password === 'demo123';
     }
-    
-    console.log('[TENANT AUTH] Password valid:', validPassword);
+
+    // SECURITY: do not log the boolean outcome of password verification.
 
     if (!validPassword) {
       return res.status(401).json({ 
@@ -96,7 +105,8 @@ router.post('/login', async (req, res) => {
     res.json(response);
 
   } catch (error) {
-    console.error('[TENANT AUTH] Login error:', error);
+    // SECURITY: scrub credentials in production before logging.
+    console.error('[TENANT AUTH] Login error:', redactError(error));
     res.status(500).json({ 
       error: 'Anmeldung fehlgeschlagen',
       message: 'Bitte versuchen Sie es erneut'

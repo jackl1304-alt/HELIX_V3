@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,19 +20,53 @@ interface Message {
   timestamp: Date;
 }
 
+// Modul-scoped: unveränderliche Agent-Definitionen (as const für Deep-Readonly).
+// Nicht exportiert — andere Dateien dürfen sie nicht mutieren.
+const AGENTS = [
+  { id: 'fda',       label: 'FDA Agent',  icon: '🇺🇸', description: 'FDA-spezifische Anfragen' },
+  { id: 'ema',       label: 'EMA Agent',  icon: '🇪🇺', description: 'EU-regulatorische Fragen' },
+  { id: 'compliance',label: 'Compliance', icon: '⚖️', description: 'Compliance & Dokumentation' },
+  { id: 'general',   label: 'General',    icon: '🌍', description: 'Allgemeine Fragen' },
+] as const satisfies readonly { id: string; label: string; icon: string; description: string }[];
+
 export default function ChatRag() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState('general');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prefillAppliedRef = useRef(false);
+  const [location] = useLocation();
 
-  const agents = [
-    { id: 'fda', label: 'FDA Agent', icon: '🇺🇸', description: 'FDA-spezifische Anfragen' },
-    { id: 'ema', label: 'EMA Agent', icon: '🇪🇺', description: 'EU-regulatorische Fragen' },
-    { id: 'compliance', label: 'Compliance', icon: '⚖️', description: 'Compliance & Dokumentation' },
-    { id: 'general', label: 'General', icon: '🌍', description: 'Allgemeine Fragen' },
-  ];
+  // Prefill from URL query (?q=...&agent=fda) — used by Cmd+K shortcuts
+  // from the Helix Command Center. Effect runs only on URL change;
+  // ref locks AFTER successful prefill so user interaction is never
+  // overwritten by browser back/forward or a stale Cmd+K route.
+  useEffect(() => {
+    if (prefillAppliedRef.current) return;
+    const qs = location.split("?")[1];
+    if (!qs) {
+      // Reine Path-URL → nichts zu applizieren, noch nicht locken
+      // (späteres Cmd+K aus anderer Page soll weiterhin wirken).
+      return;
+    }
+    const params = new URLSearchParams(qs);
+    const q = params.get("q");
+    const agent = params.get("agent");
+    let didApply = false;
+    if (agent && AGENTS.some((a) => a.id === agent)) {
+      setSelectedAgent(agent);
+      didApply = true;
+    }
+    if (q) {
+      setInputValue(q);
+      didApply = true;
+    }
+    if (didApply) {
+      prefillAppliedRef.current = true;
+    }
+    // AGENTS ist modul-scoped und unveränderlich → muss nicht in deps stehen.
+  }, [location, AGENTS]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -123,7 +158,7 @@ export default function ChatRag() {
 
       {/* Agent Selection */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        {agents.map(agent => (
+        {AGENTS.map(agent => (
           <button
             key={agent.id}
             onClick={() => setSelectedAgent(agent.id)}

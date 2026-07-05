@@ -2,6 +2,7 @@ import express from 'express';
 // Simple password validation for demo (replace with bcrypt in production)
 import { neon } from "@neondatabase/serverless";
 import { TenantRequest } from '../middleware/tenant-isolation';
+import { redactSecrets, redactError } from '../utils/redact';
 
 const router = express.Router();
 const sql = neon(process.env.DATABASE_URL!);
@@ -43,8 +44,18 @@ router.post('/login', async (req: TenantRequest, res) => {
       });
     }
 
-    // Verify password (demo implementation)
-    const validPassword = password === 'demo123';
+    // SECURITY: this route historically accepted `password === 'demo123'` for ANY
+    // user — a complete auth bypass. Production MUST replace this with real bcrypt
+    // verification (server/routes/tenant-auth.ts pattern). Until that's done, we
+    // fail LOUD with a 503 in production so operators can't miss the misconfig.
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[AUTH] Production build reached auth route without bcrypt — failing closed.');
+      return res.status(503).json({
+        error: 'Authentication is not configured in this build.',
+        hint: 'Wire up bcrypt in server/routes/auth-routes.ts before deploying to production.'
+      });
+    }
+    const validPassword = password === 'demo123'; // Dev-only fallback.
 
     if (!validPassword) {
       return res.status(401).json({ 
@@ -77,6 +88,9 @@ router.post('/login', async (req: TenantRequest, res) => {
       req.session.user = sessionUser;
     }
 
+    // SECURITY: log only the verified outcome (no boolean), no password bytes.
+    console.log('[AUTH] Login successful for:', user.email);
+
     res.json({
       success: true,
       user: {
@@ -95,8 +109,9 @@ router.post('/login', async (req: TenantRequest, res) => {
     });
 
   } catch (error) {
-    console.error('[AUTH] Login error:', error);
-    res.status(500).json({ 
+    // SECURITY: scrub credentials in production before logging.
+    console.error('[AUTH] Login error:', redactError(error));
+    res.status(500).json({
       error: 'Anmeldung fehlgeschlagen',
       message: 'Bitte versuchen Sie es erneut oder kontaktieren Sie den Support'
     });
@@ -111,7 +126,8 @@ router.post('/logout', async (req: TenantRequest, res) => {
     if (req.session) {
       req.session.destroy((err) => {
         if (err) {
-          console.error('[AUTH] Logout error:', err);
+          // SECURITY: scrub DSN/keys on prod log.
+          console.error('[AUTH] Logout error:', redactError(err));
           return res.status(500).json({ error: 'Abmeldung fehlgeschlagen' });
         }
         res.json({ success: true, message: 'Erfolgreich abgemeldet' });
@@ -120,7 +136,8 @@ router.post('/logout', async (req: TenantRequest, res) => {
       res.json({ success: true, message: 'Bereits abgemeldet' });
     }
   } catch (error) {
-    console.error('[AUTH] Logout error:', error);
+    // SECURITY: scrub DSN/keys on prod log.
+    console.error('[AUTH] Logout error:', redactError(error));
     res.status(500).json({ error: 'Abmeldung fehlgeschlagen' });
   }
 });
@@ -150,7 +167,8 @@ router.get('/profile', async (req: TenantRequest, res) => {
       }
     });
   } catch (error) {
-    console.error('[AUTH] Profile error:', error);
+    // SECURITY: scrub DSN/keys on prod log.
+    console.error('[AUTH] Profile error:', redactError(error));
     res.status(500).json({ error: 'Profil konnte nicht geladen werden' });
   }
 });

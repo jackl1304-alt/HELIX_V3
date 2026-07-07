@@ -25,6 +25,7 @@ import {
 } from "@/components/icons";
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface DevelopmentPhase {
   id: string;
@@ -49,6 +50,7 @@ interface PhaseTask {
 
 export default function Administration() {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [activePhase, setActivePhase] = useState<string>('phase1');
   const [duplicateSearchLoading, setDuplicateSearchLoading] = useState(false);
   const [duplicateResults, setDuplicateResults] = useState<any>(null);
@@ -85,14 +87,14 @@ export default function Administration() {
 
       setDuplicateResults(transformedResults);
       toast({
-        title: "Duplikate-Suche abgeschlossen",
-        description: response.message || `${transformedResults.duplicatesFound} Duplikate gefunden`,
+        title: t('admin.duplicateSearchDone'),
+        description: response.message || `${transformedResults.duplicatesFound} ${t('admin.duplicatesFound')}`,
       });
     } catch (error: any) {
       console.error('Duplikate-Suche fehlgeschlagen:', error);
       toast({
-        title: "Fehler bei der Duplikate-Suche",
-        description: error.message || "Ein unbekannter Fehler ist aufgetreten.",
+        title: t('admin.duplicateSearchError'),
+        description: error.message || t('admin.unknownError'),
         variant: "destructive",
       });
     } finally {
@@ -119,8 +121,8 @@ export default function Administration() {
       const responseData = await response.json();
 
       toast({
-        title: "Automatische Bereinigung abgeschlossen",
-        description: `${responseData.data?.duplicatesRemoved || 0} Duplikate entfernt`,
+        title: t('admin.autoCleanupDone'),
+        description: t('admin.duplicatesRemoved').replace('{{count}}', String(responseData.data?.duplicatesRemoved || 0)),
       });
 
       // Clear results and refresh
@@ -129,8 +131,8 @@ export default function Administration() {
     } catch (error: any) {
       console.error('Automatische Duplikat-Entfernung fehlgeschlagen:', error);
       toast({
-        title: "Fehler bei automatischer Bereinigung",
-        description: error.message || "Ein unbekannter Fehler ist aufgetreten.",
+        title: t('admin.autoCleanupError'),
+        description: error.message || t('admin.unknownError'),
         variant: "destructive",
       });
     } finally {
@@ -142,8 +144,8 @@ export default function Administration() {
   const handleDeleteDuplicates = async () => {
     if (!duplicateResults?.removalCandidates?.length) {
       toast({
-        title: "Keine Duplikate zum Löschen",
-        description: "Führe zuerst eine Duplikate-Suche durch.",
+        title: t('admin.noDuplicatesToDelete'),
+        description: t('admin.runSearchFirst'),
         variant: "destructive",
       });
       return;
@@ -163,8 +165,8 @@ export default function Administration() {
       }
 
       toast({
-        title: "Duplikate erfolgreich gelöscht",
-        description: `${totalRemoved} Duplikate wurden entfernt.`,
+        title: t('admin.duplicatesDeleted'),
+        description: `${totalRemoved} ${t('admin.duplicatesFound')}.`,
       });
 
       // Refresh search results
@@ -172,8 +174,8 @@ export default function Administration() {
     } catch (error: any) {
       console.error('Duplikate-Löschung fehlgeschlagen:', error);
       toast({
-        title: "Fehler beim Löschen der Duplikate",
-        description: error.message || "Ein unbekannter Fehler ist aufgetreten.",
+        title: t('admin.duplicatesDeleteError'),
+        description: error.message || t('admin.unknownError'),
         variant: "destructive",
       });
     } finally {
@@ -364,13 +366,13 @@ export default function Administration() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/development-phases'] });
       toast({
-        title: "Phase-Aktion erfolgreich",
-        description: "Die Entwicklungsphase wurde aktualisiert.",
+        title: t('admin.phaseActionSuccess'),
+        description: t('admin.phaseUpdated'),
       });
     },
     onError: (error) => {
       toast({
-        title: "Fehler",
+        title: t('common.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -393,8 +395,8 @@ export default function Administration() {
     },
     onSuccess: () => {
       toast({
-        title: "Download gestartet",
-        description: "Die Dokumentation wird heruntergeladen.",
+        title: t('admin.downloadStarted'),
+        description: t('admin.downloadDesc'),
       });
     }
   });
@@ -412,6 +414,13 @@ export default function Administration() {
     }
   };
 
+  const statusLabels: Record<string, string> = {
+    'completed': t('common.completed'),
+    'in-progress': t('dashboard.inProgress'),
+    'pending': t('common.pending'),
+    'failed': t('metrics.failed')
+  };
+
   const getStatusBadge = (status: string) => {
     const variants = {
       'completed': 'default',
@@ -420,16 +429,9 @@ export default function Administration() {
       'failed': 'destructive'
     } as const;
 
-    const labels = {
-      'completed': 'Abgeschlossen',
-      'in-progress': 'In Bearbeitung',
-      'pending': 'Ausstehend',
-      'failed': 'Fehlgeschlagen'
-    };
-
     return (
       <Badge variant={variants[status as keyof typeof variants]}>
-        {labels[status as keyof typeof labels]}
+        {statusLabels[status]}
       </Badge>
     );
   };
@@ -450,7 +452,7 @@ export default function Administration() {
   };
 
   if (isLoading) {
-    return <div className="p-6">Lade Administration...</div>;
+    return <div className="p-6">{t('admin.loading')}</div>;
   }
 
   return (
@@ -462,24 +464,24 @@ export default function Administration() {
           </div>
           <div>
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-              System Administration
+              {t('admin.title')}
             </h1>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <div className="px-4 py-2 bg-slate-100 dark:bg-slate-900/30 text-slate-800 dark:text-slate-200 rounded-xl text-sm font-semibold flex items-center gap-1">
                 <Database className="w-4 h-4" />
-                Datenbank-Management
+                {t('admin.dbManagement')}
               </div>
               <div className="px-4 py-2 bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-200 rounded-xl text-sm font-semibold flex items-center gap-1">
                 <Server className="w-4 h-4" />
-                System-Status
+                {t('admin.systemStatus')}
               </div>
               <div className="px-4 py-2 bg-zinc-100 dark:bg-zinc-900/30 text-zinc-800 dark:text-zinc-200 rounded-xl text-sm font-semibold flex items-center gap-1">
                 <Shield className="w-4 h-4" />
-                Security & Cleanup
+                {t('admin.securityCleanup')}
               </div>
             </div>
             <p className="text-gray-600 dark:text-gray-400 text-lg">
-              Entwicklungsphasen und System-Management für Helix Platform mit Executive-Controls
+              {t('admin.subtitle')}
             </p>
           </div>
         </div>
@@ -491,7 +493,7 @@ export default function Administration() {
             disabled={downloadDocs.isPending}
           >
             <Download className="h-4 w-4 mr-2" />
-            Dokumentation (.zip)
+            {t('admin.documentationZip')}
           </Button>
           <Button
             variant="outline"
@@ -499,7 +501,7 @@ export default function Administration() {
             disabled={downloadDocs.isPending}
           >
             <FileText className="h-4 w-4 mr-2" />
-            Dokumentation (.pdf)
+            {t('admin.documentationPdf')}
           </Button>
         </div>
       </div>
@@ -520,7 +522,7 @@ export default function Administration() {
           </TabsTrigger>
           <TabsTrigger value="duplicates" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
-            Duplikate-Management
+            {t('admin.duplicateManagement')}
           </TabsTrigger>
         </TabsList>
 
@@ -553,7 +555,7 @@ export default function Administration() {
                         disabled={executePhase.isPending}
                       >
                         <Play className="h-4 w-4 mr-1" />
-                        Starten
+                        {t('admin.start')}
                       </Button>
                     )}
                     {(phase.status === 'failed' || phase.status === 'completed') && (
@@ -578,7 +580,7 @@ export default function Administration() {
                 {/* Progress Bar */}
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Fortschritt</span>
+                    <span>{t('admin.progress')}</span>
                     <span>{phase.progress}%</span>
                   </div>
                   <Progress value={phase.progress} className="h-2" />
@@ -587,20 +589,20 @@ export default function Administration() {
                 {/* Phase Metadata */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div>
-                    <span className="font-medium">Geschätzte Dauer:</span>
+                    <span className="font-medium">{t('admin.estimatedDuration')}:</span>
                     <br />
                     {phase.estimatedDuration}
                   </div>
                   {phase.startDate && (
                     <div>
-                      <span className="font-medium">Startdatum:</span>
+                      <span className="font-medium">{t('admin.startDate')}:</span>
                       <br />
                       {new Date(phase.startDate).toLocaleDateString('de-DE')}
                     </div>
                   )}
                   {phase.completedDate && (
                     <div>
-                      <span className="font-medium">Abgeschlossen:</span>
+                      <span className="font-medium">{t('admin.completedDate')}:</span>
                       <br />
                       {new Date(phase.completedDate).toLocaleDateString('de-DE')}
                     </div>
@@ -612,7 +614,7 @@ export default function Administration() {
             {/* Tasks Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Aufgaben ({phase.tasks.length})</CardTitle>
+                <CardTitle>{t('admin.tasks')} ({phase.tasks.length})</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -634,7 +636,7 @@ export default function Administration() {
 
                       <div className="flex items-center gap-2">
                         <Badge variant={task.priority === 'high' ? 'destructive' : task.priority === 'medium' ? 'default' : 'outline'}>
-                          {task.priority === 'high' ? 'Hoch' : task.priority === 'medium' ? 'Mittel' : 'Niedrig'}
+                          {task.priority === 'high' ? t('regulatory.priority.high') : task.priority === 'medium' ? t('customer.medium') : t('customer.low')}
                         </Badge>
                         {getStatusBadge(task.status)}
                       </div>
@@ -652,10 +654,10 @@ export default function Administration() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                Duplikate-Management
+                {t('admin.duplicateManagement')}
               </CardTitle>
               <p className="text-gray-600 dark:text-gray-400">
-                Suche und verwalte doppelte Einträge in der Datenbank
+                {t('admin.duplicateDesc')}
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -671,7 +673,7 @@ export default function Administration() {
                   ) : (
                     <Search className="h-4 w-4" />
                   )}
-                  Duplikate suchen
+                  {t('admin.searchDuplicates')}
                 </Button>
 
                 <Button
@@ -684,7 +686,7 @@ export default function Administration() {
                   ) : (
                     <Trash2 className="h-4 w-4" />
                   )}
-                  Automatisch bereinigen
+                  {t('admin.autoCleanup')}
                 </Button>
 
                 {duplicateResults && duplicateResults.duplicatesFound > 0 && (
@@ -698,7 +700,7 @@ export default function Administration() {
                     ) : (
                       <Trash2 className="h-4 w-4" />
                     )}
-                    Duplikate löschen ({duplicateResults.duplicatesFound})
+                    {t('admin.deleteDuplicates')} ({duplicateResults.duplicatesFound})
                   </Button>
                 )}
               </div>
@@ -712,7 +714,7 @@ export default function Administration() {
                         <div className="text-2xl font-bold text-green-600">
                           {duplicateResults.totalRecords}
                         </div>
-                        <div className="text-sm text-gray-600">Gesamte Einträge</div>
+                        <div className="text-sm text-gray-600">{t('admin.totalEntries')}</div>
                       </CardContent>
                     </Card>
 
@@ -721,7 +723,7 @@ export default function Administration() {
                         <div className="text-2xl font-bold text-orange-600">
                           {duplicateResults.duplicatesFound}
                         </div>
-                        <div className="text-sm text-gray-600">Duplikate gefunden</div>
+                        <div className="text-sm text-gray-600">{t('admin.duplicatesFound')}</div>
                       </CardContent>
                     </Card>
 
@@ -730,7 +732,7 @@ export default function Administration() {
                         <div className="text-2xl font-bold text-blue-600">
                           {duplicateResults.duplicateGroups?.length || 0}
                         </div>
-                        <div className="text-sm text-gray-600">Duplikate-Gruppen</div>
+                        <div className="text-sm text-gray-600">{t('admin.duplicateGroups')}</div>
                       </CardContent>
                     </Card>
                   </div>
@@ -739,16 +741,16 @@ export default function Administration() {
                   {duplicateResults.duplicateGroups && duplicateResults.duplicateGroups.length > 0 && (
                     <Card>
                       <CardHeader>
-                        <CardTitle>Gefundene Duplikate-Gruppen</CardTitle>
+                        <CardTitle>{t('admin.foundDuplicateGroups')}</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3 max-h-96 overflow-y-auto">
                           {duplicateResults.duplicateGroups.slice(0, 10).map((group: any, index: number) => (
                             <div key={index} className="p-3 border rounded-lg">
                               <div className="flex justify-between items-start mb-2">
-                                <div className="font-medium">Gruppe {index + 1}</div>
+                                <div className="font-medium">{t('admin.group')} {index + 1}</div>
                                 <Badge variant="outline">
-                                  {group.records?.length || 0} Einträge
+                                  {group.records?.length || 0} {t('admin.entries')}
                                 </Badge>
                               </div>
                               <div className="text-sm text-gray-600 space-y-1">
@@ -759,18 +761,18 @@ export default function Administration() {
                                 ))}
                                 {group.records?.length > 3 && (
                                   <div className="text-xs text-gray-500">
-                                    ... und {group.records.length - 3} weitere
+                                    {t('admin.andMore').replace('{{count}}', String(group.records.length - 3))}
                                   </div>
                                 )}
                               </div>
                               <div className="mt-2 text-xs">
-                                Ähnlichkeit: {((group.confidence || 0) * 100).toFixed(1)}%
+                                {t('admin.similarity')}: {((group.confidence || 0) * 100).toFixed(1)}%
                               </div>
                             </div>
                           ))}
                           {duplicateResults.duplicateGroups.length > 10 && (
                             <div className="text-center text-sm text-gray-500 p-2">
-                              ... und {duplicateResults.duplicateGroups.length - 10} weitere Gruppen
+                              {t('admin.andMore').replace('{{count}}', String(duplicateResults.duplicateGroups.length - 10))}
                             </div>
                           )}
                         </div>
@@ -784,8 +786,8 @@ export default function Administration() {
                 <Card>
                   <CardContent className="p-6 text-center">
                     <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Keine Duplikate gefunden</h3>
-                    <p className="text-gray-600">Die Datenbank ist bereits bereinigt.</p>
+                    <h3 className="text-lg font-medium mb-2">{t('admin.noDuplicatesFound')}</h3>
+                    <p className="text-gray-600">{t('admin.databaseClean')}</p>
                   </CardContent>
                 </Card>
               )}

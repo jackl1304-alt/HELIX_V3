@@ -30,8 +30,13 @@ const DEFAULT_PERMISSIONS: CustomerPermissions = {
   userManagement: false,
   systemSettings: false,
   auditLogs: false,
-  analyticsInsights: false,
-  advancedAnalytics: false
+  aiInsights: false,
+  advancedAnalytics: false,
+  globalApprovals: false,
+  ongoingApprovals: false,
+  syncManager: false,
+  projects: false,
+  patents: false,
 };
 
 // Mock tenant for development - in production this would come from authentication

@@ -90,7 +90,7 @@ export default function KnowledgeBase() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <BookOpen className="h-6 w-6 text-blue-600" />
-              <span>Wissensdatenbank</span>
+              <span>{t('knowledge.wissensdatenbank')}</span>
               {!isLoading && (
                 <span className="text-sm text-gray-500">({articles.length})</span>
               )}
@@ -100,12 +100,12 @@ export default function KnowledgeBase() {
             <div className="flex items-center space-x-3">
               <Search className="h-5 w-5 text-gray-400" />
               <Input
-                placeholder="Suche nach Titel, Fokus oder Quelle…"
+                placeholder={t('knowledge.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="flex-1"
               />
-              <Badge variant="outline">{articles.length} Artikel</Badge>
+              <Badge variant="outline">{t('knowledge.articlesCount').replace('{{count}}', String(articles.length))}</Badge>
             </div>
           </CardContent>
         </Card>
@@ -120,7 +120,7 @@ export default function KnowledgeBase() {
         ) : error ? (
           <Card>
             <CardContent className="text-center py-12">
-              <p className="text-red-600">Fehler beim Laden: {(error as Error).message}</p>
+              <p className="text-red-600">{t('knowledge.loadError')}: {(error as Error).message}</p>
             </CardContent>
           </Card>
         ) : filtered.length === 0 ? (
@@ -128,8 +128,7 @@ export default function KnowledgeBase() {
             <CardContent className="text-center py-12">
               <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600 dark:text-gray-400">
-                Keine Artikel gefunden
-                {searchTerm && ` für "${searchTerm}"`}.
+                {searchTerm ? t('knowledge.noArticlesForSearch').replace('{{term}}', searchTerm) : t('knowledge.noArticlesFound')}
               </p>
             </CardContent>
           </Card>
@@ -155,14 +154,14 @@ export default function KnowledgeBase() {
                         })}
                       </span>
                     ) : (
-                      <span>Jahr: {a.year ?? 'o.J.'}</span>
+                      <span>{t('knowledge.year')}: {a.year ?? t('knowledge.noYear')}</span>
                     )}
                     {a.author && <span className="ml-2">· {a.author}</span>}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 line-clamp-4">
-                    {a.abstract ?? a.focus ?? 'Keine Beschreibung verfügbar.'}
+                    {a.abstract ?? a.focus ?? t('knowledge.noDescription')}
                   </p>
                   <div className="flex flex-wrap gap-1 mb-3">
                     {a.tags?.slice(0, 3).map((tag, i) => (
@@ -180,7 +179,7 @@ export default function KnowledgeBase() {
                       className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm"
                     >
                       <ExternalLink className="h-3 w-3" />
-                      Quelle öffnen
+                      {t('knowledge.openSource')}
                     </a>
                   )}
                 </CardContent>

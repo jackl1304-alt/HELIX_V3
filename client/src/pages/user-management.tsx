@@ -30,6 +30,7 @@ import {
 } from "@/components/icons";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface User {
   id: string;
@@ -163,6 +164,7 @@ const availablePermissions = [
 
 export default function UserManagement() {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -198,14 +200,14 @@ export default function UserManagement() {
       setIsCreateDialogOpen(false);
       form.reset();
       toast({
-        title: "Benutzer erstellt",
-        description: "Der neue Benutzer wurde erfolgreich erstellt."
+        title: t('users.created'),
+        description: t('users.createdDesc')
       });
     },
     onError: () => {
       toast({
-        title: "Fehler",
-        description: "Benutzer konnte nicht erstellt werden.",
+        title: t('common.error'),
+        description: t('users.createError'),
         variant: "destructive"
       });
     }
@@ -221,14 +223,14 @@ export default function UserManagement() {
       setSelectedUser(null);
       form.reset();
       toast({
-        title: "Benutzer aktualisiert",
-        description: "Die Benutzerdaten wurden erfolgreich aktualisiert."
+        title: t('users.updated'),
+        description: t('users.updatedDesc')
       });
     },
     onError: () => {
       toast({
-        title: "Fehler",
-        description: "Benutzer konnte nicht aktualisiert werden.",
+        title: t('common.error'),
+        description: t('users.updateError'),
         variant: "destructive"
       });
     }
@@ -241,14 +243,14 @@ export default function UserManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       toast({
-        title: "Benutzer gelöscht",
-        description: "Der Benutzer wurde erfolgreich gelöscht."
+        title: t('users.deleted'),
+        description: t('users.deletedDesc')
       });
     },
     onError: () => {
       toast({
-        title: "Fehler",
-        description: "Benutzer konnte nicht gelöscht werden.",
+        title: t('common.error'),
+        description: t('users.deleteError'),
         variant: "destructive"
       });
     }
@@ -305,9 +307,9 @@ export default function UserManagement() {
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Benutzerverwaltung</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('users.title')}</h1>
           <p className="text-muted-foreground">
-            Verwalten Sie Benutzer, Rollen und Berechtigungen
+            {t('users.subtitle')}
           </p>
         </div>
 
@@ -315,14 +317,14 @@ export default function UserManagement() {
           <DialogTrigger asChild>
             <Button>
               <UserPlus className="mr-2 h-4 w-4" />
-              Neuer Benutzer
+              {t('users.newUser')}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Neuen Benutzer erstellen</DialogTitle>
+              <DialogTitle>{t('users.createUser')}</DialogTitle>
               <DialogDescription>
-                Erstellen Sie ein neues Benutzerkonto mit entsprechenden Berechtigungen.
+                {t('users.createUserDesc')}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -333,7 +335,7 @@ export default function UserManagement() {
                     name="firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Vorname</FormLabel>
+                        <FormLabel>{t('users.firstName')}</FormLabel>
                         <FormControl>
                           <Input {...field} />
                         </FormControl>
@@ -346,7 +348,7 @@ export default function UserManagement() {
                     name="lastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nachname</FormLabel>
+                        <FormLabel>{t('users.lastName')}</FormLabel>
                         <FormControl>
                           <Input {...field} />
                         </FormControl>
@@ -361,7 +363,7 @@ export default function UserManagement() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>E-Mail</FormLabel>
+                      <FormLabel>{t('users.email')}</FormLabel>
                       <FormControl>
                         <Input type="email" {...field} />
                       </FormControl>
@@ -376,7 +378,7 @@ export default function UserManagement() {
                     name="role"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Rolle</FormLabel>
+                        <FormLabel>{t('users.role')}</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
@@ -384,9 +386,9 @@ export default function UserManagement() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="user">Benutzer</SelectItem>
-                            <SelectItem value="reviewer">Reviewer</SelectItem>
-                            <SelectItem value="admin">Administrator</SelectItem>
+                            <SelectItem value="user">{t('users.user')}</SelectItem>
+                            <SelectItem value="reviewer">{t('users.reviewer')}</SelectItem>
+                            <SelectItem value="admin">{t('users.administrator')}</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -400,9 +402,9 @@ export default function UserManagement() {
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                         <div className="space-y-0.5">
-                          <FormLabel className="text-base">Aktiv</FormLabel>
+                          <FormLabel className="text-base">{t('users.active')}</FormLabel>
                           <div className="text-sm text-muted-foreground">
-                            Benutzer kann sich anmelden
+                            {t('users.canLogin')}
                           </div>
                         </div>
                         <FormControl>
@@ -422,10 +424,10 @@ export default function UserManagement() {
                     variant="outline"
                     onClick={() => setIsCreateDialogOpen(false)}
                   >
-                    Abbrechen
+                    {t('common.cancel')}
                   </Button>
                   <Button type="submit" disabled={createUserMutation.isPending}>
-                    {createUserMutation.isPending ? "Erstelle..." : "Erstellen"}
+                    {createUserMutation.isPending ? t('users.creating') : t('users.create')}
                   </Button>
                 </div>
               </form>
@@ -436,21 +438,21 @@ export default function UserManagement() {
 
       <Tabs defaultValue="users" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="users">Benutzer</TabsTrigger>
-          <TabsTrigger value="activity">Aktivitäten</TabsTrigger>
-          <TabsTrigger value="permissions">Berechtigungen</TabsTrigger>
+          <TabsTrigger value="users">{t('users.tabUsers')}</TabsTrigger>
+          <TabsTrigger value="activity">{t('users.tabActivity')}</TabsTrigger>
+          <TabsTrigger value="permissions">{t('users.tabPermissions')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
           <Card>
             <CardHeader>
-              <CardTitle>Alle Benutzer</CardTitle>
+              <CardTitle>{t('users.allUsers')}</CardTitle>
               <CardDescription>
-                Übersicht über alle registrierten Benutzer im System
+                {t('users.allUsersDesc')}
               </CardDescription>
               <div className="flex space-x-4">
                 <Input
-                  placeholder="Benutzer suchen..."
+                  placeholder={t('users.searchUsers')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="max-w-sm"
@@ -460,10 +462,10 @@ export default function UserManagement() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Alle Rollen</SelectItem>
-                    <SelectItem value="admin">Administrator</SelectItem>
-                    <SelectItem value="reviewer">Reviewer</SelectItem>
-                    <SelectItem value="user">Benutzer</SelectItem>
+                    <SelectItem value="all">{t('users.allRoles')}</SelectItem>
+                    <SelectItem value="admin">{t('users.administrator')}</SelectItem>
+                    <SelectItem value="reviewer">{t('users.reviewer')}</SelectItem>
+                    <SelectItem value="user">{t('users.user')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -472,12 +474,12 @@ export default function UserManagement() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Benutzer</TableHead>
-                    <TableHead>Rolle</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Letzter Login</TableHead>
-                    <TableHead>Erstellt</TableHead>
-                    <TableHead className="text-right">Aktionen</TableHead>
+                    <TableHead>{t('users.columns.user')}</TableHead>
+                    <TableHead>{t('users.columns.role')}</TableHead>
+                    <TableHead>{t('users.columns.status')}</TableHead>
+                    <TableHead>{t('users.columns.lastLogin')}</TableHead>
+                    <TableHead>{t('users.columns.created')}</TableHead>
+                    <TableHead className="text-right">{t('users.columns.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -514,11 +516,11 @@ export default function UserManagement() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={user.isActive ? "default" : "secondary"}>
-                          {user.isActive ? "Aktiv" : "Inaktiv"}
+                          {user.isActive ? t('common.active') : t('common.inactive')}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {user.lastLoginAt ? formatDate(user.lastLoginAt) : "Nie"}
+                        {user.lastLoginAt ? formatDate(user.lastLoginAt) : t('users.never')}
                       </TableCell>
                       <TableCell>{formatDate(user.createdAt)}</TableCell>
                       <TableCell className="text-right">
@@ -551,9 +553,9 @@ export default function UserManagement() {
         <TabsContent value="activity">
           <Card>
             <CardHeader>
-              <CardTitle>Benutzeraktivitäten</CardTitle>
+              <CardTitle>{t('users.userActivities')}</CardTitle>
               <CardDescription>
-                Letzte Aktivitäten und Aktionen der Benutzer
+                {t('users.userActivitiesDesc')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -569,7 +571,7 @@ export default function UserManagement() {
                         <p className="font-medium">{activity.action}</p>
                         <p className="text-sm text-muted-foreground">{activity.details}</p>
                         <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-1">
-                          <span>Benutzer: {user?.firstName} {user?.lastName}</span>
+                          <span>{t('users.user')}: {user?.firstName} {user?.lastName}</span>
                           <span>•</span>
                           <span>{formatDate(activity.timestamp)}</span>
                           {activity.ipAddress && (
@@ -591,27 +593,31 @@ export default function UserManagement() {
         <TabsContent value="permissions">
           <Card>
             <CardHeader>
-              <CardTitle>Berechtigungen verwalten</CardTitle>
+              <CardTitle>{t('users.managePermissions')}</CardTitle>
               <CardDescription>
-                Übersicht über verfügbare Berechtigungen im System
+                {t('users.managePermissionsDesc')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2">
-                {availablePermissions.map((permission) => (
+                {availablePermissions.map((permission) => {
+                  const permKey = `users.permission.${permission.id === 'user_management' ? 'userMgmt' : permission.id}`;
+                  const permDescKey = `${permKey}Desc`;
+                  return (
                   <div key={permission.id} className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-medium">{permission.label}</h3>
+                      <h3 className="font-medium">{t(permKey)}</h3>
                       <Badge variant="outline">
                         <Key className="h-3 w-3 mr-1" />
                         {permission.id}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {permission.description}
+                      {t(permDescKey)}
                     </p>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -622,9 +628,9 @@ export default function UserManagement() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Benutzer bearbeiten</DialogTitle>
+            <DialogTitle>{t('users.editUser')}</DialogTitle>
             <DialogDescription>
-              Bearbeiten Sie die Benutzerdaten und Berechtigungen.
+              {t('users.editUserDesc')}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -635,7 +641,7 @@ export default function UserManagement() {
                   name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Vorname</FormLabel>
+                      <FormLabel>{t('users.firstName')}</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -648,7 +654,7 @@ export default function UserManagement() {
                   name="lastName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nachname</FormLabel>
+                      <FormLabel>{t('users.lastName')}</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -663,7 +669,7 @@ export default function UserManagement() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>E-Mail</FormLabel>
+                    <FormLabel>{t('users.email')}</FormLabel>
                     <FormControl>
                       <Input type="email" {...field} />
                     </FormControl>
@@ -678,7 +684,7 @@ export default function UserManagement() {
                   name="role"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Rolle</FormLabel>
+                      <FormLabel>{t('users.role')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -686,9 +692,9 @@ export default function UserManagement() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="user">Benutzer</SelectItem>
-                          <SelectItem value="reviewer">Reviewer</SelectItem>
-                          <SelectItem value="admin">Administrator</SelectItem>
+                          <SelectItem value="user">{t('users.user')}</SelectItem>
+                          <SelectItem value="reviewer">{t('users.reviewer')}</SelectItem>
+                          <SelectItem value="admin">{t('users.administrator')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -702,9 +708,9 @@ export default function UserManagement() {
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                       <div className="space-y-0.5">
-                        <FormLabel className="text-base">Aktiv</FormLabel>
+                        <FormLabel className="text-base">{t('users.active')}</FormLabel>
                         <div className="text-sm text-muted-foreground">
-                          Benutzer kann sich anmelden
+                          {t('users.canLogin')}
                         </div>
                       </div>
                       <FormControl>
@@ -724,10 +730,10 @@ export default function UserManagement() {
                   variant="outline"
                   onClick={() => setIsEditDialogOpen(false)}
                 >
-                  Abbrechen
+                  {t('common.cancel')}
                 </Button>
                 <Button type="submit" disabled={updateUserMutation.isPending}>
-                  {updateUserMutation.isPending ? "Speichere..." : "Speichern"}
+                  {updateUserMutation.isPending ? t('users.saving') : t('users.save')}
                 </Button>
               </div>
             </form>

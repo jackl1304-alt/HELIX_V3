@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
  */
 export default function Dashboard() {
   const { t } = useLanguage();
+  const fallbackDate = t('time.today');
   const [, setLocation] = useLocation();
 
   // Health-Stats für die Quick-Action-Tiles
@@ -59,17 +60,17 @@ export default function Dashboard() {
           <p className="text-sm text-slate-500 mt-0.5">
             {fmtDate(new Date().toISOString(), {
               mode: "long",
-              fallback: "Heute",
+              fallback: fallbackDate,
             })}
             {" · "}
             <span className="font-mono text-slate-600">
               {stats?.activeDataSources ?? 0}
             </span>{" "}
-            aktive Quellen ·{" "}
+            {t('dashboard.activeQuellen')} ·{" "}
             <span className="font-mono text-slate-600">
               {stats?.totalUpdates ?? 0}
             </span>{" "}
-            Updates total
+            {t('dashboard.updatesTotal')}
           </p>
         </div>
         <form
@@ -91,13 +92,13 @@ export default function Dashboard() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
               name="globalSearch"
-              placeholder="Suche Updates, Patente, Cases… (⌘K)"
+              placeholder={t('dashboard.searchBarPlaceholder')}
               className="pl-9 pr-3 h-9 text-sm"
               data-testid="command-center-search"
             />
           </div>
           <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-200 rounded text-slate-500">
-            ↵ Suche
+            {t('dashboard.searchHint')}
           </kbd>
         </form>
       </div>
@@ -111,15 +112,15 @@ export default function Dashboard() {
           <div>
             <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              HELIX Pulse
+              {t('dashboard.helixPulse')}
             </h2>
             <p className="text-[11px] text-slate-500 mt-0.5">
-              Live-Stream regulatorischer Ereignisse · {insightsCount} offene KI-Aufgaben
+              {t('dashboard.liveStreamEvents')} · {t('dashboard.openAiTasks').replace('{{count}}', String(insightsCount))}
             </p>
           </div>
           <Button variant="ghost" size="sm" className="text-xs text-slate-600 hover:text-slate-900">
             <RefreshCw className="h-3.5 w-3.5 mr-1" />
-            Aktualisieren
+            {t('dashboard.refresh')}
           </Button>
         </div>
         <HelixPulse limit={18} />
@@ -128,9 +129,9 @@ export default function Dashboard() {
       {/* Command Tabs — Regulatory | FDA-Agent | Operations */}
       <div>
         <div className="flex items-baseline justify-between mb-2">
-          <h2 className="text-sm font-semibold text-slate-900">Command Grid</h2>
+          <h2 className="text-sm font-semibold text-slate-900">{t('dashboard.commandGrid')}</h2>
           <span className="text-[11px] text-slate-400">
-            Mehr Details auf den einzelnen Tabs
+            {t('dashboard.moreDetailsTabs')}
           </span>
         </div>
         <CommandTabs defaultTab="regulatory" />
@@ -145,7 +146,7 @@ export default function Dashboard() {
               {t("dashboard.quickActions")}
             </h2>
             <p className="text-[11px] text-slate-500">
-              Direktzugriff für die häufigsten Workflows
+              {t('dashboard.directAccessWorkflows')}
             </p>
           </div>
         </div>
@@ -170,7 +171,7 @@ export default function Dashboard() {
               href: "/knowledge-base",
               icon: Book,
               label: t("knowledge.title"),
-              sub: "Artikel",
+              sub: t('dashboard.articles'),
               tone: "emerald",
             },
             {
@@ -191,7 +192,7 @@ export default function Dashboard() {
               href: "/patents",
               icon: Globe,
               label: t("nav.globalPatents"),
-              sub: "USPTO · EPO · WIPO",
+              sub: t('dashboard.usptoEpoWipo'),
               tone: "cyan",
             },
           ].map((a) => {

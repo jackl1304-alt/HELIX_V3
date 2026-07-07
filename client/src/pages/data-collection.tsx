@@ -13,9 +13,11 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { DataSource } from "@shared/schema";
 import { PDFDownloadButton } from "@/components/ui/pdf-download-button";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function DataCollection() {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [selectedSource, setSelectedSource] = useState<DataSource | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -145,21 +147,21 @@ export default function DataCollection() {
       
       if (newUpdatesFound > 0) {
         toast({
-          title: "✅ Synchronisation erfolgreich",
-          description: `${sourceId}: ${newUpdatesFound} neue Updates gesammelt (${existingDataCount + newUpdatesFound} gesamt)`,
+          title: t('dataCollection.syncSuccess'),
+          description: t('dataCollection.syncSuccessDesc').replace('{{sourceId}}', sourceId).replace('{{newUpdates}}', String(newUpdatesFound)).replace('{{total}}', String(existingDataCount + newUpdatesFound)),
         });
       } else {
         toast({
-          title: "ℹ️ Sync abgeschlossen",
-          description: `${sourceId}: Keine neuen Updates verfügbar (${existingDataCount} bestehende)`,
+          title: t('dataCollection.syncComplete'),
+          description: t('dataCollection.syncCompleteDesc').replace('{{sourceId}}', sourceId).replace('{{existing}}', String(existingDataCount)),
         });
       }
     },
     onError: (error, sourceId) => {
       console.error("Frontend: Documentation error:", error);
       toast({
-        title: "Dokumentation fehlgeschlagen", 
-        description: `Fehler bei der Dokumentation von ${sourceId}: ${error.message}`,
+        title: t('dataCollection.syncError'), 
+        description: t('dataCollection.syncErrorDesc').replace('{{sourceId}}', sourceId).replace('{{message}}', error.message),
         variant: "destructive",
       });
     },
@@ -186,15 +188,15 @@ export default function DataCollection() {
       console.log("Frontend: Newsletter sync simulation completed", data);
       
       toast({
-        title: "✅ Newsletter Sync Abgeschlossen",
-        description: `${data.activeNewsletters} aktive von ${data.totalNewsletters} Newsletter-Quellen erfolgreich synchronisiert`,
+        title: t('dataCollection.newsletterSyncSuccess'),
+        description: t('dataCollection.newsletterSyncSuccessDesc').replace('{{active}}', String(data.activeNewsletters)).replace('{{total}}', String(data.totalNewsletters)),
       });
     },
     onError: (error: any) => {
       console.error("Frontend: Newsletter sync error:", error);
       toast({
-        title: "Sync Fehlgeschlagen",
-        description: "Newsletter-Synchronisation konnte nicht abgeschlossen werden",
+        title: t('dataCollection.newsletterSyncFailed'),
+        description: t('dataCollection.newsletterSyncFailedDesc'),
         variant: "destructive",
       });
     },
@@ -228,15 +230,15 @@ export default function DataCollection() {
       console.log("Frontend: Regulatory data refresh successful", data);
       
       toast({
-        title: "✅ Regulatorische Daten Aktualisiert",
-        description: `${data.activeSources} aktive von ${data.totalSources} Datenquellen überprüft`,
+        title: t('dataCollection.regDataRefreshed'),
+        description: t('dataCollection.regDataRefreshedDesc').replace('{{active}}', String(data.activeSources)).replace('{{total}}', String(data.totalSources)),
       });
     },
     onError: (error: any) => {
       console.error("Frontend: Regulatory data refresh error:", error);
       toast({
-        title: "Fehler beim Aktualisieren",
-        description: "Die regulatorischen Daten konnten nicht aktualisiert werden",
+        title: t('dataCollection.regDataRefreshError'),
+        description: t('dataCollection.regDataRefreshErrorDesc'),
         variant: "destructive",
       });
     },
@@ -278,15 +280,15 @@ export default function DataCollection() {
       const { successful = 0, total = 0, totalNewUpdates = 0 } = data;
       
       toast({
-        title: "✅ Sync All Abgeschlossen",
-        description: `${successful}/${total} Quellen erfolgreich synchronisiert. ${totalNewUpdates} neue Updates gesammelt.`,
+        title: t('dataCollection.syncAllComplete'),
+        description: t('dataCollection.syncAllCompleteDesc').replace('{{successful}}', String(successful)).replace('{{total}}', String(total)).replace('{{newUpdates}}', String(totalNewUpdates)),
       });
     },
     onError: (error: any) => {
       console.error("Frontend: Sync all error:", error);
       toast({
-        title: "Sync All Fehlgeschlagen",
-        description: `Fehler beim Synchronisieren aller Quellen: ${error.message}`,
+        title: t('dataCollection.syncAllFailed'),
+        description: t('dataCollection.syncAllFailedDesc').replace('{{message}}', error.message),
         variant: "destructive",
       });
     },
@@ -318,14 +320,14 @@ export default function DataCollection() {
       setIsAddDialogOpen(false);
       setNewSource({ name: '', type: 'regulatory', endpoint: '', description: '' });
       toast({
-        title: "Source Added",
-        description: "New data source has been successfully added.",
+        title: t('dataCollection.sourceAdded'),
+        description: t('dataCollection.sourceAddedDesc'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Add Failed",
-        description: `Failed to add data source: ${error.message}`,
+        title: t('dataCollection.sourceAddFailed'),
+        description: t('dataCollection.sourceAddFailedDesc').replace('{{message}}', error.message),
         variant: "destructive",
       });
     },
@@ -354,14 +356,14 @@ export default function DataCollection() {
     },
     onSuccess: () => {
       toast({
-        title: "Settings Saved",
-        description: "Data collection settings have been updated.",
+        title: t('dataCollection.settingsSaved'),
+        description: t('dataCollection.settingsSavedDesc'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Save Failed",
-        description: `Failed to save settings: ${error.message}`,
+        title: t('dataCollection.settingsSaveFailed'),
+        description: t('dataCollection.settingsSaveFailedDesc').replace('{{message}}', error.message),
         variant: "destructive",
       });
     },
@@ -370,8 +372,8 @@ export default function DataCollection() {
   const handleAddSource = () => {
     if (!newSource.name || !newSource.endpoint) {
       toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields.",
+        title: t('dataCollection.validationError'),
+        description: t('dataCollection.fillRequiredFields'),
         variant: "destructive",
       });
       return;
@@ -400,21 +402,21 @@ export default function DataCollection() {
 
   const getStatusBadge = (source: DataSource) => {
     if (!source.isActive) {
-      return <Badge variant="secondary">Inactive</Badge>;
+      return <Badge variant="secondary">{t('dataCollection.inactive')}</Badge>;
     }
     if (!source.lastSync) {
-      return <Badge variant="outline">Never Synced</Badge>;
+      return <Badge variant="outline">{t('dataCollection.neverSynced')}</Badge>;
     }
     const lastSync = new Date(source.lastSync);
     const now = new Date();
     const hoursSinceSync = (now.getTime() - lastSync.getTime()) / (1000 * 60 * 60);
     
     if (hoursSinceSync < 1) {
-      return <Badge className="bg-green-100 text-green-800">Active</Badge>;
+      return <Badge className="bg-green-100 text-green-800">{t('dataCollection.active')}</Badge>;
     } else if (hoursSinceSync < 24) {
-      return <Badge variant="outline" className="bg-yellow-50 text-yellow-700">Recent</Badge>;
+      return <Badge variant="outline" className="bg-yellow-50 text-yellow-700">{t('dataCollection.recent')}</Badge>;
     } else {
-      return <Badge variant="destructive">Stale</Badge>;
+      return <Badge variant="destructive">{t('dataCollection.stale')}</Badge>;
     }
   };
 
@@ -441,24 +443,24 @@ export default function DataCollection() {
           </div>
           <div>
             <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-              Data Collection Center
+              {t('dataCollection.dataCollectionCenter')}
             </h1>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <div className="px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-xl text-sm font-semibold flex items-center gap-1">
                 <Database className="w-4 h-4" />
-                Auto-Sync
+                {t('dataCollection.autoSync')}
               </div>
               <div className="px-4 py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200 rounded-xl text-sm font-semibold flex items-center gap-1">
                 <CheckCircle className="w-4 h-4" />
-                Data Quality
+                {t('dataCollection.dataQuality')}
               </div>
               <div className="px-4 py-2 bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-200 rounded-xl text-sm font-semibold flex items-center gap-1">
                 <TrendingUp className="w-4 h-4" />
-                Live Monitoring
+                {t('dataCollection.liveMonitoring')}
               </div>
             </div>
             <p className="text-gray-600 dark:text-gray-400 text-lg">
-              Monitor and manage {sources?.length || '70'} global regulatory data sources with Executive-Controls
+              {t('dataCollection.monitorSubtitle').replace('{{count}}', String(sources?.length || '70'))}
             </p>
           </div>
         </div>
@@ -467,9 +469,9 @@ export default function DataCollection() {
       <Tabs defaultValue="sources" className="space-y-6">
         <div className="flex items-center justify-between">
           <TabsList>
-            <TabsTrigger value="sources">Data Sources</TabsTrigger>
-            <TabsTrigger value="sync-history">Sync History</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="sources">{t('dataCollection.dataSources')}</TabsTrigger>
+            <TabsTrigger value="sync-history">{t('dataCollection.syncHistory')}</TabsTrigger>
+            <TabsTrigger value="settings">{t('dataCollection.settings')}</TabsTrigger>
           </TabsList>
           
           <div className="flex gap-2">
@@ -484,7 +486,7 @@ export default function DataCollection() {
               ) : (
                 <FolderSync className="h-4 w-4 mr-2" />
               )}
-              Sync All Sources
+              {t('dataCollection.syncAllSources')}
             </Button>
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
@@ -493,16 +495,16 @@ export default function DataCollection() {
                 className="bg-[#d95d2c] hover:bg-[#b8441f] text-white"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Add Source
+              {t('dataCollection.addSource')}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>Add New Data Source</DialogTitle>
+                <DialogTitle>{t('dataCollection.addNewSource')}</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="name">Source Name *</Label>
+                  <Label htmlFor="name">{t('dataCollection.sourceName')}</Label>
                   <Input
                     id="name"
                     value={newSource.name}
@@ -511,35 +513,35 @@ export default function DataCollection() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="type">Type</Label>
+                  <Label htmlFor="type">{t('dataCollection.type')}</Label>
                   <Select value={newSource.type} onValueChange={(value) => setNewSource({...newSource, type: value})}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="regulatory">Regulatory</SelectItem>
-                      <SelectItem value="guidelines">Guidelines</SelectItem>
-                      <SelectItem value="standards">Standards</SelectItem>
-                      <SelectItem value="legal">Legal</SelectItem>
+                      <SelectItem value="regulatory">{t('dataCollection.regulatory')}</SelectItem>
+                      <SelectItem value="guidelines">{t('dataCollection.guidelines')}</SelectItem>
+                      <SelectItem value="standards">{t('dataCollection.standards')}</SelectItem>
+                      <SelectItem value="legal">{t('dataCollection.legal')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="endpoint">API Endpoint *</Label>
+                  <Label htmlFor="endpoint">{t('dataCollection.apiEndpoint')}</Label>
                   <Input
                     id="endpoint"
                     value={newSource.endpoint}
                     onChange={(e) => setNewSource({...newSource, endpoint: e.target.value})}
-                    placeholder="https://api.example.com/data"
+                    placeholder={t('dataCollection.endpointPlaceholder')}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description">{t('dataCollection.description')}</Label>
                   <Input
                     id="description"
                     value={newSource.description}
                     onChange={(e) => setNewSource({...newSource, description: e.target.value})}
-                    placeholder="Brief description of this data source"
+                    placeholder={t('dataCollection.briefDescription')}
                   />
                 </div>
                 <Button 
@@ -547,7 +549,7 @@ export default function DataCollection() {
                   disabled={addSourceMutation.isPending}
                   className="w-full"
                 >
-                  {addSourceMutation.isPending ? 'Adding...' : 'Add Data Source'}
+                  {addSourceMutation.isPending ? t('dataCollection.adding') : t('dataCollection.addDataSource')}
                 </Button>
               </div>
             </DialogContent>
@@ -563,15 +565,15 @@ export default function DataCollection() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-red-800">🏛️ Regulatorische Datenquellen</h3>
+                    <h3 className="text-lg font-semibold text-red-800">{t('dataCollection.regulatoryDataSources')}</h3>
                     <p className="text-sm text-red-600 mt-1">
-                      Offizielle regulatorische Datenbanken (FDA, WHO, EU) für Compliance-Daten
+                      {t('dataCollection.regulatorySourcesDesc')}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="text-sm text-red-700 text-right">
-                      <div className="font-medium">{sources?.filter(s => s.isActive !== false && s.type === 'regulatory').length || 0} aktiv</div>
-                      <div className="text-xs">{sources?.filter(s => s.type === 'regulatory').length || 0} gesamt</div>
+                      <div className="font-medium">{sources?.filter(s => s.isActive !== false && s.type === 'regulatory').length || 0} {t('dataCollection.aktiv')}</div>
+                      <div className="text-xs">{sources?.filter(s => s.type === 'regulatory').length || 0} {t('dataCollection.gesamt')}</div>
                     </div>
                     <Button
                       size="sm"
@@ -584,7 +586,7 @@ export default function DataCollection() {
                       ) : (
                         <Database className="h-4 w-4 mr-2" />
                       )}
-                      Regulatorische Daten
+                      {t('dataCollection.regulatoryData')}
                     </Button>
                   </div>
                 </div>
@@ -611,7 +613,7 @@ export default function DataCollection() {
                             variant={source.active ? 'default' : 'secondary'}
                             className="text-xs"
                           >
-                            {source.active ? 'Aktiv' : 'Premium'}
+                            {source.active ? t('dataCollection.aktiv') : t('dataCollection.premium')}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-1 mt-1">
@@ -619,9 +621,9 @@ export default function DataCollection() {
                             {source.region}
                           </Badge>
                           <Badge variant="outline" className="text-xs px-1">
-                            {source.category === 'regulatory_database' ? 'Datenbank' : 
-                             source.category === 'standards' ? 'Standards' : 
-                             source.category === 'compliance' ? 'Compliance' : 'Analyse'}
+                            {source.category === 'regulatory_database' ? t('dataCollection.datenbank') : 
+                             source.category === 'standards' ? t('dataCollection.standards') : 
+                             source.category === 'compliance' ? t('dataCollection.compliance') : t('dataCollection.analyse')}
                           </Badge>
                         </div>
                       </div>
@@ -636,15 +638,15 @@ export default function DataCollection() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-blue-800">📧 Newsletter-Quellen</h3>
+                    <h3 className="text-lg font-semibold text-blue-800">{t('dataCollection.newsletterSources')}</h3>
                     <p className="text-sm text-blue-600 mt-1">
-                      Authentische MedTech-Newsletter für automatische Inhaltsextraktion
+                      {t('dataCollection.newsletterSourcesDesc')}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                       <div className="text-sm text-blue-700 text-right">
-                        <div className="font-medium">{newsletterSources.filter(s => s.is_active !== false).length} aktiv</div>
-                        <div className="text-xs">{newsletterSources.length} gesamt</div>
+                        <div className="font-medium">{newsletterSources.filter(s => s.is_active !== false).length} {t('dataCollection.aktiv')}</div>
+                        <div className="text-xs">{newsletterSources.length} {t('dataCollection.gesamt')}</div>
                       </div>
                     <Button
                       size="sm"
@@ -657,7 +659,7 @@ export default function DataCollection() {
                       ) : (
                         <FolderSync className="h-4 w-4 mr-2" />
                       )}
-                      Newsletter Sync
+                      {t('dataCollection.newsletterSync')}
                     </Button>
                   </div>
                 </div>
@@ -676,7 +678,7 @@ export default function DataCollection() {
                               variant={source.is_active ? 'default' : 'secondary'}
                               className="text-xs"
                             >
-                              {source.is_active ? 'Aktiv' : 'Inaktiv'}
+                              {source.is_active ? t('dataCollection.aktiv') : t('dataCollection.inactive')}
                             </Badge>
                           </div>
                           <p className="text-xs text-gray-500 truncate">
@@ -687,10 +689,10 @@ export default function DataCollection() {
                               {source.region}
                             </Badge>
                             <Badge variant="outline" className="text-xs px-1">
-                              {source.category === 'news' ? 'News' : 
-                               source.category === 'regulatory' ? 'Regulatorisch' : 
-                               source.category === 'research' ? 'Forschung' :
-                               source.category === 'industry' ? 'Branche' : source.category}
+                            {source.category === 'news' ? t('dataCollection.news') : 
+                             source.category === 'regulatory' ? t('dataCollection.regulatory') : 
+                             source.category === 'research' ? t('dataCollection.research') :
+                             source.category === 'industry' ? t('dataCollection.industry') : source.category}
                             </Badge>
                           </div>
                         </div>
@@ -700,7 +702,7 @@ export default function DataCollection() {
                 ) : (
                   <div className="text-center py-6">
                     <div className="text-blue-500 mb-2">📧</div>
-                    <p className="text-sm text-blue-600">Keine Newsletter-Quellen verfügbar</p>
+                    <p className="text-sm text-blue-600">{t('dataCollection.noNewsletterSources')}</p>
                   </div>
                 )}
               </CardContent>
@@ -716,11 +718,11 @@ export default function DataCollection() {
                         <div className="flex items-center space-x-4 mt-2">
                           {getStatusBadge(source)}
                           <span className="text-sm text-gray-500">
-                            Type: {source.type}
+                            {t('dataCollection.type')}: {source.type}
                           </span>
                           {source.lastSync && (
                             <span className="text-sm text-gray-500">
-                              Last sync: {new Date(source.lastSync).toLocaleString()}
+                              {t('dataCollection.lastSync')}: {new Date(source.lastSync).toLocaleString()}
                             </span>
                           )}
                         </div>
@@ -733,7 +735,7 @@ export default function DataCollection() {
                           className="bg-[#d95d2c] hover:bg-[#b8441f] text-white"
                         >
                           <FolderSync className="h-4 w-4 mr-2" />
-                          {syncMutation.isPending ? "Dokumentiert..." : "Sync Now"}
+                          {syncMutation.isPending ? t('dataCollection.documenting') : t('dataCollection.syncNow')}
                         </Button>
                         <Button variant="outline" size="sm">
                           <Edit className="h-4 w-4" />
@@ -743,7 +745,7 @@ export default function DataCollection() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-gray-600">
-                      {source.apiEndpoint || source.url || 'No endpoint configured'}
+                      {source.apiEndpoint || source.url || t('dataCollection.noEndpointConfigured')}
                     </p>
                   </CardContent>
                 </Card>
@@ -752,11 +754,11 @@ export default function DataCollection() {
               <Card>
                 <CardContent className="text-center py-8">
                   <AlertCircle className="mx-auto h-8 w-8 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-600 mb-2">No Data Sources</h3>
-                  <p className="text-gray-500 mb-4">Add your first data source to start collecting regulatory data.</p>
+                  <h3 className="text-lg font-semibold text-gray-600 mb-2">{t('dataCollection.noDataSources')}</h3>
+                  <p className="text-gray-500 mb-4">{t('dataCollection.addFirstSource')}</p>
                   <Button>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Data Source
+                    {t('dataCollection.addDataSource')}
                   </Button>
                 </CardContent>
               </Card>
@@ -768,12 +770,12 @@ export default function DataCollection() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold">Synchronization History</h3>
-                <p className="text-sm text-gray-500 mt-1">View recent data collection activities</p>
+                <h3 className="text-lg font-semibold">{t('dataCollection.synchronizationHistory')}</h3>
+                <p className="text-sm text-gray-500 mt-1">{t('dataCollection.viewRecentActivities')}</p>
               </div>
               <Button variant="outline" size="sm">
                 <ExternalLink className="h-4 w-4 mr-2" />
-                View All Logs
+                {t('dataCollection.viewAllLogs')}
               </Button>
             </CardHeader>
             <CardContent>
@@ -784,11 +786,11 @@ export default function DataCollection() {
                     <div className="flex items-center gap-2">
                       <History className="h-4 w-4 text-blue-600" />
                       <span className="font-medium">FDA Historical Archive</span>
-                      <Badge className="bg-green-100 text-green-800">Success</Badge>
+                      <Badge className="bg-green-100 text-green-800">{t('dataCollection.success')}</Badge>
                     </div>
                     <span className="text-sm text-gray-500">{new Date().toLocaleString()}</span>
                   </div>
-                  <p className="text-sm text-gray-600">Synchronized 7 new regulatory updates</p>
+                  <p className="text-sm text-gray-600">{t('dataCollection.syncedItems').replace('{{count}}', '7')}</p>
                 </div>
 
                 <div className="border rounded-lg p-4">
@@ -796,11 +798,11 @@ export default function DataCollection() {
                     <div className="flex items-center gap-2">
                       <History className="h-4 w-4 text-green-600" />
                       <span className="font-medium">BfArM Leitfäden</span>
-                      <Badge className="bg-green-100 text-green-800">Success</Badge>
+                      <Badge className="bg-green-100 text-green-800">{t('dataCollection.success')}</Badge>
                     </div>
                     <span className="text-sm text-gray-500">{new Date(Date.now() - 3600000).toLocaleString()}</span>
                   </div>
-                  <p className="text-sm text-gray-600">Synchronized 3 new guidelines</p>
+                  <p className="text-sm text-gray-600">{t('dataCollection.syncedGuidelines').replace('{{count}}', '3')}</p>
                 </div>
 
                 <div className="border rounded-lg p-4">
@@ -808,17 +810,17 @@ export default function DataCollection() {
                     <div className="flex items-center gap-2">
                       <History className="h-4 w-4 text-purple-600" />
                       <span className="font-medium">EMA EPAR Database</span>
-                      <Badge className="bg-green-100 text-green-800">Success</Badge>
+                      <Badge className="bg-green-100 text-green-800">{t('dataCollection.success')}</Badge>
                     </div>
                     <span className="text-sm text-gray-500">{new Date(Date.now() - 7200000).toLocaleString()}</span>
                   </div>
-                  <p className="text-sm text-gray-600">Synchronized 12 new EPAR documents</p>
+                  <p className="text-sm text-gray-600">{t('dataCollection.syncedEpar').replace('{{count}}', '12')}</p>
                 </div>
 
                 <div className="text-center py-4">
                   <Button variant="outline">
                     <History className="mr-2 h-4 w-4" />
-                    Load More History
+                    {t('dataCollection.loadMoreHistory')}
                   </Button>
                 </div>
               </div>
@@ -831,8 +833,8 @@ export default function DataCollection() {
             <CardHeader className="flex flex-row items-center gap-2">
               <Settings className="h-5 w-5 text-gray-600" />
               <div>
-                <h3 className="text-lg font-semibold">Data Collection Settings</h3>
-                <p className="text-sm text-gray-500 mt-1">Configure synchronization and collection parameters</p>
+                <h3 className="text-lg font-semibold">{t('dataCollection.dataCollectionSettings')}</h3>
+                <p className="text-sm text-gray-500 mt-1">{t('dataCollection.configureSyncParams')}</p>
               </div>
             </CardHeader>
             <CardContent>
@@ -840,60 +842,60 @@ export default function DataCollection() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Label className="text-sm font-medium text-gray-700 mb-3 block">
-                      Automatic Sync Frequency
+                      {t('dataCollection.autoSyncFreq')}
                     </Label>
                     <Select value={syncFrequency} onValueChange={setSyncFrequency}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="15min">Every 15 minutes</SelectItem>
-                        <SelectItem value="hourly">Every Hour</SelectItem>
-                        <SelectItem value="daily">Daily at 6:00 AM</SelectItem>
-                        <SelectItem value="weekly">Weekly (Sundays)</SelectItem>
-                        <SelectItem value="manual">Manual only</SelectItem>
+                        <SelectItem value="15min">{t('dataCollection.every15min')}</SelectItem>
+                        <SelectItem value="hourly">{t('dataCollection.everyHour')}</SelectItem>
+                        <SelectItem value="daily">{t('dataCollection.daily6am')}</SelectItem>
+                        <SelectItem value="weekly">{t('dataCollection.weeklySunday')}</SelectItem>
+                        <SelectItem value="manual">{t('dataCollection.manualOnly')}</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-gray-500 mt-1">How often to check for new data</p>
+                    <p className="text-xs text-gray-500 mt-1">{t('dataCollection.howOften')}</p>
                   </div>
                   
                   <div>
                     <Label className="text-sm font-medium text-gray-700 mb-3 block">
-                      Retry Failed Syncs
+                      {t('dataCollection.retryFailedSyncs')}
                     </Label>
                     <Select value={retryCount} onValueChange={setRetryCount}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="0">No retries</SelectItem>
-                        <SelectItem value="1">1 retry</SelectItem>
-                        <SelectItem value="3">3 retries</SelectItem>
-                        <SelectItem value="5">5 retries</SelectItem>
-                        <SelectItem value="10">10 retries</SelectItem>
+                        <SelectItem value="0">{t('dataCollection.noRetries')}</SelectItem>
+                        <SelectItem value="1">{t('dataCollection.retries').replace('{{count}}','1')}</SelectItem>
+                        <SelectItem value="3">{t('dataCollection.retries').replace('{{count}}','3')}</SelectItem>
+                        <SelectItem value="5">{t('dataCollection.retries').replace('{{count}}','5')}</SelectItem>
+                        <SelectItem value="10">{t('dataCollection.retries').replace('{{count}}','10')}</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-gray-500 mt-1">Number of retry attempts for failed syncs</p>
+                    <p className="text-xs text-gray-500 mt-1">{t('dataCollection.retryDesc')}</p>
                   </div>
                 </div>
 
                 <div className="border-t pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="text-sm font-medium text-gray-900">Real-time Monitoring</h4>
-                      <p className="text-xs text-gray-500">Monitor data sources for immediate updates</p>
+                      <h4 className="text-sm font-medium text-gray-900">{t('dataCollection.realTimeMonitoring')}</h4>
+                      <p className="text-xs text-gray-500">{t('dataCollection.monitorImmediateUpdates')}</p>
                     </div>
-                    <Badge className="bg-green-100 text-green-800">Active</Badge>
+                    <Badge className="bg-green-100 text-green-800">{t('dataCollection.active')}</Badge>
                   </div>
                 </div>
 
                 <div className="border-t pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="text-sm font-medium text-gray-900">Data Validation</h4>
-                      <p className="text-xs text-gray-500">Automatically validate incoming regulatory data</p>
+                      <h4 className="text-sm font-medium text-gray-900">{t('dataCollection.dataValidation')}</h4>
+                      <p className="text-xs text-gray-500">{t('dataCollection.autoValidateIncoming')}</p>
                     </div>
-                    <Badge className="bg-blue-100 text-blue-800">Enabled</Badge>
+                    <Badge className="bg-blue-100 text-blue-800">{t('common.active')}</Badge>
                   </div>
                 </div>
                 
@@ -903,10 +905,10 @@ export default function DataCollection() {
                     disabled={saveSettingsMutation.isPending}
                     className="flex-1"
                   >
-                    {saveSettingsMutation.isPending ? 'Saving...' : 'Save Settings'}
+                    {saveSettingsMutation.isPending ? t('dataCollection.saving') : t('dataCollection.saveSettings')}
                   </Button>
                   <Button variant="outline">
-                    Reset to Defaults
+                    {t('dataCollection.resetDefaults')}
                   </Button>
                 </div>
               </div>

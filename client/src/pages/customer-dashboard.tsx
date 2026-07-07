@@ -68,6 +68,7 @@ export default function CustomerDashboard() {
   const [selectedTimeRange, setSelectedTimeRange] = useState('30d');
   const params = useParams();
   const { logout } = useAuth();
+  const { t } = useLanguage();
 
   // Use tenant ID from URL if available, otherwise use mock ID
   const tenantId = params.tenantId || mockTenantId;
@@ -86,17 +87,17 @@ export default function CustomerDashboard() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <Card className="max-w-md">
           <CardHeader>
-            <CardTitle>Zugriff verweigert</CardTitle>
+            <CardTitle>{t('customer.accessDenied')}</CardTitle>
             <CardDescription>
-              Sie haben keine Berechtigung für das Dashboard.
+              {t('customer.noDashboardPermission')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Bitte kontaktieren Sie Ihren Administrator.
+              {t('customer.contactAdmin')}
             </p>
             <Button onClick={() => window.history.back()}>
-              Zurück
+              {t('customer.back')}
             </Button>
           </CardContent>
         </Card>
@@ -214,13 +215,13 @@ export default function CustomerDashboard() {
         </div>
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span>Compliance Score</span>
+            <span>{t('customer.complianceScore')}</span>
             <span className="font-medium">{score}%</span>
           </div>
           <Progress value={score} className="h-2" />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{alerts} aktive Warnungen</span>
-            <span>{score >= 90 ? 'Excellent' : score >= 80 ? 'Good' : 'Needs Attention'}</span>
+            <span>{t('customer.activeWarnings').replace('{{count}}', String(alerts))}</span>
+            <span>{score >= 90 ? t('customer.complianceExcellent') : score >= 80 ? t('customer.complianceGood') : t('customer.complianceNeedsAttention')}</span>
           </div>
         </div>
       </CardContent>
@@ -242,8 +243,6 @@ export default function CustomerDashboard() {
     );
   }
 
-  const { t } = useLanguage();
-
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 relative">
       {/* Language Selector - Top Right */}
@@ -264,7 +263,7 @@ export default function CustomerDashboard() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div>
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            Kunden-Dashboard
+            {t('customer.dashboardTitle')}
           </h1>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -275,11 +274,11 @@ export default function CustomerDashboard() {
             </div>
             <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200">
               <Crown className="w-3 h-3 mr-1" />
-              Professional Plan
+              {t('customer.professionalPlan')}
             </Badge>
             <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200">
               <CheckCircle className="w-3 h-3 mr-1" />
-              Active
+              {t('common.active')}
             </Badge>
           </div>
         </div>
@@ -289,30 +288,30 @@ export default function CustomerDashboard() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7d">7 Tage</SelectItem>
-              <SelectItem value="30d">30 Tage</SelectItem>
-              <SelectItem value="90d">90 Tage</SelectItem>
-              <SelectItem value="12m">12 Monate</SelectItem>
+              <SelectItem value="7d">{t('customer.days7')}</SelectItem>
+              <SelectItem value="30d">{t('customer.days30')}</SelectItem>
+              <SelectItem value="90d">{t('customer.days90')}</SelectItem>
+              <SelectItem value="12m">{t('customer.months12')}</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline">
             <MessageCircle className="w-4 h-4 mr-2" />
-            Support Chat
+            {t('customer.supportChat')}
           </Button>
           <Button variant="outline">
             <Download className="w-4 h-4 mr-2" />
-            Export
+            {t('customer.export')}
           </Button>
           <Button>
             <Settings className="w-4 h-4 mr-2" />
-            Einstellungen
+            {t('customer.settings')}
           </Button>
           <Button variant="outline" onClick={() => {
             logout();
             window.location.reload();
           }}>
             <LogOut className="w-4 h-4 mr-2" />
-            Abmelden
+            {t('customer.logout')}
           </Button>
         </div>
       </div>
@@ -321,45 +320,45 @@ export default function CustomerDashboard() {
       {permissions?.dashboard && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            title="Monatliche Nutzung"
+            title={t('customer.monthlyUsage')}
             value={`${dashboardData?.usage.currentMonth.toLocaleString()} / ${dashboardData?.usage.limit.toLocaleString()}`}
             change="+8.2%"
             changeType="increase"
             icon={Activity}
-            description={`${dashboardData?.usage.percentage}% vom Limit verbraucht`}
+            description={t('customer.ofLimitUsed').replace('{{pct}}', String(dashboardData?.usage.percentage))}
             color="blue"
             href="/regulatory-updates"
           />
           <StatCard
-            title="Compliance Score"
+            title={t('customer.complianceScore')}
             value={`${dashboardData?.dashboard.compliance.score}%`}
             change="+2.1%"
             changeType="increase"
             icon={Shield}
-            description={`${dashboardData?.dashboard.compliance.alerts} aktive Warnungen`}
+            description={t('customer.activeWarnings').replace('{{count}}', String(dashboardData?.dashboard.compliance.alerts))}
             color="green"
             href="/analytics"
           />
           {permissions?.userManagement && (
             <StatCard
-              title="Aktive Benutzer"
+              title={t('customer.activeUsers')}
               value={`${dashboardData?.usage.users} / ${dashboardData?.usage.userLimit}`}
-              change="Stabil"
+              change={t('customer.stable')}
               changeType="stable"
               icon={Users}
-              description="Team-Nutzung im Rahmen"
+              description={t('customer.teamUsageOk')}
               color="purple"
               href="/user-management"
             />
           )}
           {permissions?.analytics && (
             <StatCard
-              title="Data Quality"
+              title={t('customer.dataQuality')}
               value={`${dashboardData?.dashboard.analytics.dataQuality}%`}
               change="+1.3%"
               changeType="increase"
               icon={Target}
-              description="Datenqualität hervorragend"
+              description={t('customer.dataQualityExcellent')}
               color="orange"
               href="/analytics"
             />
@@ -374,10 +373,10 @@ export default function CustomerDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
-              Nutzungstrend
+              {t('customer.usageTrend')}
             </CardTitle>
             <CardDescription>
-              Monatliche Datenabfragen und API-Calls
+              {t('customer.usageTrendDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -398,10 +397,10 @@ export default function CustomerDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
-              Regionale Verteilung
+              {t('customer.regionalDistribution')}
             </CardTitle>
             <CardDescription>
-              Anteil der Updates nach Regionen
+              {t('customer.regionalDistributionDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -442,10 +441,10 @@ export default function CustomerDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
-              Compliance-Übersicht
+              {t('customer.complianceOverview')}
             </CardTitle>
             <CardDescription>
-              Regionale Compliance-Scores und aktuelle Warnungen
+              {t('customer.complianceOverviewDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -465,16 +464,16 @@ export default function CustomerDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
-              Aktuelle Aktivitäten
+              {t('customer.recentActivity')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {[
-                { action: 'Neue FDA 510(k) Zulassung', time: '2 Stunden', type: 'approval', critical: false },
-                { action: 'EU MDR Update verfügbar', time: '5 Stunden', type: 'update', critical: true },
-                { action: 'API-Limit zu 75% erreicht', time: '1 Tag', type: 'warning', critical: false },
-                { action: 'Compliance-Score aktualisiert', time: '2 Tage', type: 'info', critical: false }
+                { actionKey: 'customer.newFdaApproval', timeKey: 'customer.time.2hoursAgo', type: 'approval', critical: false },
+                { actionKey: 'customer.euMdrUpdate', timeKey: 'customer.time.5hoursAgo', type: 'update', critical: true },
+                { actionKey: 'customer.apiLimitReached', timeKey: 'customer.time.1dayAgo', type: 'warning', critical: false },
+                { actionKey: 'customer.complianceScoreUpdated', timeKey: 'customer.time.2daysAgo', type: 'info', critical: false }
               ].map((activity, index) => (
                 <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
                   <div className="flex items-center gap-3">
@@ -483,13 +482,13 @@ export default function CustomerDashboard() {
                     {activity.type === 'warning' && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
                     {activity.type === 'info' && <Activity className="h-4 w-4 text-gray-500" />}
                     <div>
-                      <p className="text-sm font-medium">{activity.action}</p>
-                      <p className="text-xs text-muted-foreground">vor {activity.time}</p>
+                      <p className="text-sm font-medium">{t(activity.actionKey)}</p>
+                      <p className="text-xs text-muted-foreground">{t(activity.timeKey)}</p>
                     </div>
                   </div>
                   {activity.critical && (
                     <Badge variant="destructive" className="text-xs">
-                      Kritisch
+                      {t('customer.critical')}
                     </Badge>
                   )}
                 </div>
@@ -502,15 +501,15 @@ export default function CustomerDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5" />
-              Aktive Warnungen
+              {t('customer.activeAlerts')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {[
-                { title: 'EU MDR Deadline approaching', severity: 'high', date: '2025-08-15' },
-                { title: 'FDA Cybersecurity Requirements', severity: 'medium', date: '2025-09-01' },
-                { title: 'API Rate Limit Warning', severity: 'low', date: '2025-08-12' }
+                { titleKey: 'customer.euMdrDeadline', severity: 'high', date: '2025-08-15' },
+                { titleKey: 'customer.fdaCyberReq', severity: 'medium', date: '2025-09-01' },
+                { titleKey: 'customer.apiRateWarning', severity: 'low', date: '2025-08-12' }
               ].map((alert, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
                   <div className="flex items-center gap-3">
@@ -519,8 +518,8 @@ export default function CustomerDashboard() {
                       alert.severity === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
                     }`}></div>
                     <div>
-                      <p className="text-sm font-medium">{alert.title}</p>
-                      <p className="text-xs text-muted-foreground">Fällig: {alert.date}</p>
+                      <p className="text-sm font-medium">{t(alert.titleKey)}</p>
+                      <p className="text-xs text-muted-foreground">{t('customer.dueDate')}: {alert.date}</p>
                     </div>
                   </div>
                   <Badge className={
@@ -528,7 +527,8 @@ export default function CustomerDashboard() {
                     alert.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
                     'bg-blue-100 text-blue-800'
                   }>
-                    {alert.severity}
+                    {alert.severity === 'high' ? t('customer.high') :
+                    alert.severity === 'medium' ? t('customer.medium') : t('customer.low')}
                   </Badge>
                 </div>
               ))}
@@ -544,22 +544,22 @@ export default function CustomerDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Crown className="h-5 w-5" />
-              Subscription Status
+              {t('customer.subscriptionStatus')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6 md:grid-cols-2">
               <div>
-                <h4 className="font-medium mb-4">Current Plan: Professional</h4>
+                <h4 className="font-medium mb-4">{t('customer.currentPlan')}: Professional</h4>
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Monatliche Updates</span>
+                    <span className="text-sm text-muted-foreground">{t('customer.monthlyUpdates')}</span>
                     <span className="text-sm font-medium">{dashboardData?.usage.currentMonth} / 2.500</span>
                   </div>
                   <Progress value={dashboardData?.usage.percentage} />
 
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Team-Mitglieder</span>
+                    <span className="text-sm text-muted-foreground">{t('customer.teamMembers')}</span>
                     <span className="text-sm font-medium">{dashboardData?.usage.users || 0} / {dashboardData?.usage.userLimit || 0}</span>
                   </div>
                   <Progress value={((dashboardData?.usage.users || 0) / (dashboardData?.usage.userLimit || 1)) * 100} />
@@ -567,23 +567,23 @@ export default function CustomerDashboard() {
               </div>
 
               <div>
-                <h4 className="font-medium mb-4">Nächste Abrechnung</h4>
+                <h4 className="font-medium mb-4">{t('customer.nextBilling')}</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Betrag</span>
+                    <span className="text-sm text-muted-foreground">{t('customer.amount')}</span>
                     <span className="text-lg font-bold">€899</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Datum</span>
+                    <span className="text-sm text-muted-foreground">{t('customer.date')}</span>
                     <span className="text-sm font-medium">31.08.2025</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Zahlungsart</span>
+                    <span className="text-sm text-muted-foreground">{t('customer.paymentMethod')}</span>
                     <span className="text-sm">**** 1234</span>
                   </div>
                 </div>
                 <Button className="w-full mt-4" variant="outline">
-                  Plan verwalten
+                  {t('customer.managePlan')}
                 </Button>
               </div>
             </div>
@@ -597,11 +597,10 @@ export default function CustomerDashboard() {
             <CardContent>
               <Shield className="w-16 h-16 mx-auto text-gray-400 mb-4" />
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Zugriff beschränkt
+                {t('customer.restrictedAccess')}
               </h3>
               <p className="text-gray-600 max-w-md mx-auto">
-                Ihr Administrator hat den Zugriff auf diese Dashboard-Bereiche beschränkt.
-                Kontaktieren Sie Ihren Administrator, um weitere Berechtigungen zu erhalten.
+                {t('customer.restrictedDesc')}
               </p>
             </CardContent>
           </Card>

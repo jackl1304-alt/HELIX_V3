@@ -329,8 +329,13 @@ function getDefaultPermissions(): any {
     userManagement: false,
     systemSettings: false,
     auditLogs: false,
-    analyticsInsights: false,
+    aiInsights: false,
     advancedAnalytics: false,
+    globalApprovals: false,
+    ongoingApprovals: false,
+    syncManager: false,
+    projects: false,
+    patents: false,
   };
 }
 

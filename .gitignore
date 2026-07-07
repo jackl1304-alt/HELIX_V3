@@ -70,3 +70,8 @@ restore-db.sql
 
 # Temp extraction from master_sources docx
 tmp_master_sources.txt
+
+# Sensitive files — API keys, secrets, configs
+.replit
+.local/
+server/utils/redact.ts

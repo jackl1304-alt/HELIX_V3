@@ -12,6 +12,12 @@ import regAutomationStatusRouter from './routes/regAutomationStatus.js';
 import masterSourcesRoutes from './routes/master-sources.routes.js';
 import masterCatalogRoutes from './routes/master-catalog.routes.js';
 import formTemplatesRoutes from './routes/form-templates.routes.js';
+import claimsRoutes from './routes/claims.routes.js';
+import auditRoutes from './routes/audit.routes.js';
+import transparencyRoutes from './routes/transparency.routes.js';
+import agentsRoutes from './routes/agents.routes.js';
+import pipelineRoutes from './routes/pipeline.routes.js';
+import tenAgentsRoutes from './routes/tenAgents.routes.js';
 import adminTenantsRoutes from './routes/admin-tenants.js';
 import customerRoutes from './routes/customer.js';
 // ESM Imports statt require() für Node ESM Kompatibilität
@@ -989,6 +995,30 @@ export function registerRoutes(app: Express) {
 
   app.use('/api/notes', notesRoutes);
   console.log('✅ Notes routes loaded successfully');
+
+  // Claims Registry Routes (Claim-Registry + Provenance-Chain)
+  app.use('/api', claimsRoutes);
+  console.log('✅ Claims & Provenance routes loaded successfully');
+
+  // Immutable Audit Trail Routes
+  app.use('/api', auditRoutes);
+  console.log('✅ Immutable Audit routes loaded successfully');
+
+  // AI/ML Transparency Routes
+  app.use('/api', transparencyRoutes);
+  console.log('✅ AI/ML Transparency routes loaded successfully');
+
+  // 20-Agent Registry Routes
+  app.use('/api', agentsRoutes);
+  console.log('✅ 20-Agent Registry routes loaded successfully');
+
+  // Regulatory Pipeline Routes (Detect→Triage→Validate→Propagate)
+  app.use('/api', pipelineRoutes);
+  console.log('✅ Regulatory Pipeline routes loaded successfully');
+
+  // 10-Agent Orchestrator Routes (Best 10 Agents with LLM-powered review)
+  app.use('/api', tenAgentsRoutes);
+  console.log('✅ 10-Agent Orchestrator routes loaded successfully');
 
   // Auth routes (conditional import to prevent crashes)
   try {

@@ -3,8 +3,11 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import net from 'net';
 
+// Erhöhe EventListener-Limit für viele gleichzeitige Pipeline-Operationen (Detection, Import)
+process.setMaxListeners(50);
+
 import express, { type Request, type Response, type NextFunction } from "express";
-import { createServer } from "http";
+import { createServer } from "node:http";
 import cors from "cors";
 import helmet from "helmet";
 import { registerRoutes } from "./routes.js";

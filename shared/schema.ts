@@ -7,6 +7,7 @@ import {
   integer,
   boolean,
   jsonb,
+  real,
   pgEnum,
   index,
   customType
@@ -1321,8 +1322,6 @@ export const normativeActions = pgTable("normative_actions", {
 ]);
 
 // Zod schemas for new tables
-import { z } from 'zod';
-
 export const authoritySourceSchema = z.object({
   name: z.string().min(2),
   citation: z.string().min(2),
@@ -1394,6 +1393,7 @@ export const insertNormativeActionSchema = z.object({
 export type InsertRegulatoryUpdateEvaluation = z.infer<typeof insertRegulatoryUpdateEvaluationSchema>;
 export type InsertCostItem = z.infer<typeof insertCostItemSchema>;
 export type InsertNormativeAction = z.infer<typeof insertNormativeActionSchema>;
+
 export const insertProjectChartaSchema = createInsertSchema(projectChartaDocuments).omit({
   id: true,
   createdAt: true,
@@ -1544,20 +1544,315 @@ export const changeImpacts = pgTable("change_impacts", {
   index("idx_change_impacts_reference").on(table.referenceId),
 ]);
 
-// Audit Trail
+// ============================================================
+// CLAIM REGISTRY – Jede faktische Aussage als referenzierbare Einheit
+// ============================================================
+
+// Claim-Status im Prüfprozess
+export const claimStatusEnum = pgEnum("claim_status", [
+  "draft",          // Gerade extrahiert, ungeprüft
+  "verified",       // Von mindestens einem Prüfer bestätigt
+  "contested",      // Widerspruch durch Prüfer
+  "superseded",     // Durch neuere Rechtslage ersetzt
+  "retracted"       // Zurückgezogen (fehlerhaft)
+]);
+
+// Claim-Typen
+export const claimTypeEnum = pgEnum("claim_type", [
+  "normative",        // "ISO 13485:2016 Clause 7.3.3 verlangt Design-Eingaben"
+  "regulatory",       // "MDR Art. 10 Abs. 9 fordert ein QMS"
+  "interpretive",     // "Der EuGH hat in C-123/24 entschieden, dass..."
+  "factual",          // "Die FDA hat 2024 42 PMAs zugelassen"
+  "deadline",         // "Die Übergangsfrist endet am 26. Mai 2027"
+  "obligation"        // "Der Hersteller MUSS eine klinische Prüfung durchführen"
+]);
+
+// Prüfergebnis
+export const verdictEnum = pgEnum("verdict", [
+  "confirmed",
+  "disputed",
+  "needs_correction",
+  "insufficient_evidence"
+]);
+
+// Prüfer-Typ
+export const reviewerTypeEnum = pgEnum("reviewer_type", [
+  "human",
+  "ai_agent"
+]);
+
+// Prüfer-Rollen für das Multi-Reviewer-System
+export const reviewerRoleEnum = pgEnum("reviewer_role", [
+  "fda_expert",
+  "eu_legal",
+  "compliance_officer",
+  "customer_auditor",
+  "quality_auditor",
+  "notified_body",
+  "regulatory_strategist",
+  "clinical_expert",
+  "data_scientist",
+  "patent_examiner"
+]);
+
+// Provenance Chain Link-Typen
+export const provenanceLinkTypeEnum = pgEnum("provenance_link_type", [
+  "ingestion",
+  "extraction",
+  "claim",
+  "verification",
+  "output"
+]);
+
+// Output-Typen
+export const outputTypeEnum = pgEnum("output_type", [
+  "chat_response",
+  "compliance_report",
+  "regulatory_analysis",
+  "patent_analysis",
+  "legal_analysis",
+  "newsletter"
+]);
+
+// Audit Trail – Immutable Event Sourcing mit SHA-256-Hash-Chaining
 export const auditTrail = pgTable("audit_trail", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventType: varchar("event_type").notNull(), // AuditEventType: "source.ingested", "agent.model_invoked", etc.
   entityType: varchar("entity_type"),
   entityId: varchar("entity_id"),
-  action: varchar("action"),
   performedBy: varchar("performed_by"),
   performedRole: varchar("performed_role"),
-  before: jsonb("before"),
-  after: jsonb("after"),
+  jurisdiction: varchar("jurisdiction"),
+  payload: jsonb("payload").default(sql`'{}'`),
+  description: text("description"),
+  tenantId: varchar("tenant_id"),
+  // SHA-256 Hash Chain für manipulationssichere Kette
+  previousHash: varchar("previous_hash"), // Hash des vorherigen Events
+  eventHash: varchar("event_hash").notNull(), // Hash dieses Events
+  chainHash: varchar("chain_hash").notNull(), // SHA256(previousHash + eventHash + timestamp)
   timestamp: timestamp("timestamp").defaultNow(),
 }, (table) => [
   index("idx_audit_entity").on(table.entityId),
-  index("idx_audit_action").on(table.action),
+  index("idx_audit_event_type").on(table.eventType),
+  index("idx_audit_chain_hash").on(table.chainHash),
+  index("idx_audit_jurisdiction").on(table.jurisdiction),
   index("idx_audit_time").on(table.timestamp),
 ]);
+
+// ============================================================
+// AI TRANSPARENCY LOG – AI Act Art. 13 + FDA PCCP konformes Transparenzlogging
+// ============================================================
+export const aiTransparencyLog = pgTable("ai_transparency_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  outputId: varchar("output_id").notNull(),
+  modelName: varchar("model_name").notNull(),
+  modelVersion: varchar("model_version"),
+  provider: varchar("provider").notNull(),
+  systemPrompt: text("system_prompt"),
+  userPrompt: text("user_prompt"),
+  fullPrompt: text("full_prompt"),
+  temperature: real("temperature"),
+  topP: real("top_p"),
+  seed: integer("seed"),
+  maxTokens: integer("max_tokens"),
+  sourceIds: text("source_ids").array(),
+  regulatoryUpdateIds: text("regulatory_update_ids").array(),
+  claimIds: text("claim_ids").array(),
+  totalSourceDocuments: integer("total_source_documents"),
+  responseContent: text("response_content"),
+  responseLength: integer("response_length"),
+  inputTokens: integer("input_tokens"),
+  outputTokens: integer("output_tokens"),
+  totalTokens: integer("total_tokens"),
+  confidenceScore: integer("confidence_score"),
+  confidenceExplanation: text("confidence_explanation"),
+  uncertaintyFlags: text("uncertainty_flags").array(),
+  latencyMs: integer("latency_ms"),
+  agentName: varchar("agent_name"),
+  jurisdiction: varchar("jurisdiction"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_ai_transparency_output").on(table.outputId),
+  index("idx_ai_transparency_model").on(table.modelName),
+  index("idx_ai_transparency_agent").on(table.agentName),
+  index("idx_ai_transparency_created").on(table.createdAt),
+]);
+
+export const insertAiTransparencyLogSchema = createInsertSchema(aiTransparencyLog).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertAiTransparencyLog = z.infer<typeof insertAiTransparencyLogSchema>;
+export type AiTransparencyLog = typeof aiTransparencyLog.$inferSelect;
+
+// ============================================================
+// CLAIMS TABLE – Zentrale Claim-Registry
+// ============================================================
+export const claims = pgTable("claims", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
+
+  // Die Aussage selbst
+  claimText: text("claim_text").notNull(),
+  claimHash: varchar("claim_hash").notNull(),
+  claimType: claimTypeEnum("claim_type").notNull(),
+
+  // Quellenverketung
+  sourceId: varchar("source_id").references(() => dataSources.id),
+  sourceDocumentUrl: varchar("source_document_url"),
+  sourceCitation: varchar("source_citation"),
+  sourceAccessDate: timestamp("source_access_date"),
+  sourceVersion: varchar("source_version"),
+  extractionMethod: varchar("extraction_method"),
+  extractionConfig: varchar("extraction_config"),
+  extractedBy: varchar("extracted_by"),
+
+  // Verknüpfung zu Datenbank-Entitäten
+  regulatoryUpdateId: varchar("regulatory_update_id")
+    .references(() => regulatoryUpdates.id, { onDelete: "set null" }),
+  legalCaseId: varchar("legal_case_id")
+    .references(() => legalCases.id, { onDelete: "set null" }),
+
+  // Vertrauens- & Prüfstatus
+  status: claimStatusEnum("status").default("draft"),
+  confidenceScore: integer("confidence_score"),
+
+  // Jurisdiktion & Anwendbarkeit
+  jurisdiction: varchar("jurisdiction"),
+  applicableDeviceClasses: text("applicable_device_classes").array(),
+  effectiveFrom: timestamp("effective_from"),
+  effectiveUntil: timestamp("effective_until"),
+  isTransitional: boolean("is_transitional").default(false),
+
+  tags: text("tags").array(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_claims_hash").on(table.claimHash),
+  index("idx_claims_status").on(table.status),
+  index("idx_claims_jurisdiction").on(table.jurisdiction),
+  index("idx_claims_type").on(table.claimType),
+  index("idx_claims_source").on(table.sourceId),
+  index("idx_claims_update").on(table.regulatoryUpdateId),
+  index("idx_claims_case").on(table.legalCaseId),
+]);
+
+// ============================================================
+// CLAIM VERIFICATIONS – Prüfnachweise
+// ============================================================
+export const claimVerifications = pgTable("claim_verifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  claimId: varchar("claim_id").references(() => claims.id, { onDelete: "cascade" }).notNull(),
+
+  reviewerId: varchar("reviewer_id"),
+  reviewerRole: reviewerRoleEnum("reviewer_role").notNull(),
+  reviewerType: reviewerTypeEnum("reviewer_type").notNull(),
+  agentName: varchar("agent_name"),
+
+  verdict: verdictEnum("verdict").notNull(),
+  confidenceOverride: integer("confidence_override"),
+  comment: text("comment"),
+  evidenceUrls: text("evidence_urls").array(),
+
+  verificationMethod: varchar("verification_method"),
+  reviewedAt: timestamp("reviewed_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_verifications_claim").on(table.claimId),
+  index("idx_verifications_reviewer").on(table.reviewerId),
+  index("idx_verifications_verdict").on(table.verdict),
+]);
+
+// ============================================================
+// OUTPUT-CLAIM-MAPPING – Welche Claims in welcher Ausgabe?
+// ============================================================
+export const outputClaims = pgTable("output_claims", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+
+  outputId: varchar("output_id").notNull(),
+  outputType: outputTypeEnum("output_type").notNull(),
+
+  claimId: varchar("claim_id").references(() => claims.id, { onDelete: "cascade" }).notNull(),
+
+  outputSection: varchar("output_section"),
+  usageType: varchar("usage_type").default("cited"),
+
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_output_claims_output").on(table.outputId),
+  index("idx_output_claims_claim").on(table.claimId),
+]);
+
+// ============================================================
+// PROVENANCE CHAIN – Kryptographisch verkettete Herkunftsnachweise
+// ============================================================
+export const provenanceChainItems = pgTable("provenance_chain", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
+
+  chainId: varchar("chain_id").notNull(),
+  linkIndex: integer("link_index").notNull(),
+  linkType: provenanceLinkTypeEnum("link_type").notNull(),
+
+  previousHash: varchar("previous_hash"),
+  contentHash: varchar("content_hash").notNull(),
+  chainHash: varchar("chain_hash").notNull(),
+
+  sourceId: varchar("source_id"),
+  regulatoryUpdateId: varchar("regulatory_update_id"),
+  claimId: varchar("claim_id"),
+  verificationId: varchar("verification_id"),
+  outputId: varchar("output_id"),
+
+  generator: varchar("generator").notNull(),
+  generatorVersion: varchar("generator_version"),
+
+  // Original content payload for validation
+  contentPayload: text("content_payload"),
+
+  isValid: boolean("is_valid"),
+  validatedAt: timestamp("validated_at"),
+
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_provenance_chain").on(table.chainId, table.linkIndex),
+  index("idx_provenance_chain_hash").on(table.chainHash),
+  index("idx_provenance_regulatory_update").on(table.regulatoryUpdateId),
+  index("idx_provenance_claim").on(table.claimId),
+  index("idx_provenance_output").on(table.outputId),
+]);
+
+// ============================================================
+// CLAIM REGISTRY Zod Schemas (moved after table definitions)
+// ============================================================
+
+export const insertClaimSchema = createInsertSchema(claims).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertClaim = z.infer<typeof insertClaimSchema>;
+export type Claim = typeof claims.$inferSelect;
+
+export const insertClaimVerificationSchema = createInsertSchema(claimVerifications).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertClaimVerification = z.infer<typeof insertClaimVerificationSchema>;
+export type ClaimVerification = typeof claimVerifications.$inferSelect;
+
+export const insertOutputClaimSchema = createInsertSchema(outputClaims).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertOutputClaim = z.infer<typeof insertOutputClaimSchema>;
+export type OutputClaim = typeof outputClaims.$inferSelect;
+
+export const insertProvenanceChainItemSchema = createInsertSchema(provenanceChainItems).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertProvenanceChainItem = z.infer<typeof insertProvenanceChainItemSchema>;
+export type ProvenanceChainItem = typeof provenanceChainItems.$inferSelect;
 

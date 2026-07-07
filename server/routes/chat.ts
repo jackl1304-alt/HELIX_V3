@@ -3,7 +3,7 @@ import { Router, Request, Response } from 'express';
 import { storage } from '../storage';
 import { insertChatMessageSchema, insertChatConversationSchema } from '../../shared/schema';
 import { z } from 'zod';
-import { processRegulatoryQuery } from '../services/agentRouter';
+import { processRegulatoryQuery } from '../services/agentRouter.js';
 import { callGroqLLM, callGroqChatStreaming } from '../services/groqService';
 import { Logger } from '../services/logger.service';
 

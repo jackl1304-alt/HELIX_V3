@@ -1,11 +1,93 @@
 import OpenAI from "openai";
-import { db } from "../storage";
-import { regulatoryUpdates, dataSources, legalCases } from "../../shared/schema";
-import { Logger } from "./logger.service";
+import { db } from "../storage.js";
+import { regulatoryUpdates, dataSources, legalCases } from "../../shared/schema.js";
+import { Logger } from "./logger.service.js";
 import { sql, inArray, and, or, ilike } from "drizzle-orm";
-import { callGroqChatStreaming } from "./groqService";
+import { callGroqChatStreaming } from "./groqService.js";
+import { claimRegistryService } from "./claimRegistryService.js";
+import { aiTransparencyService } from "./aiTransparencyService.js";
+import crypto from "crypto";
 
 const logger = new Logger("AgentRouter");
+
+/**
+ * Generate a deterministic output ID for provenance tracking
+ */
+function generateOutputId(agent: string, query: string): string {
+  const hash = crypto.createHash("sha256").update(`${agent}:${query}:${Date.now()}`).digest("hex").substring(0, 16);
+  return `out_${agent}_${hash}`;
+}
+
+/**
+ * Load verified claims for a set of regulatory update IDs and build a claim-based prompt context.
+ * Falls back to raw updates if no claims are available.
+ */
+async function buildClaimContext(
+  updateIds: string[],
+  query: string,
+): Promise<{ claimContext: string; usedClaimIds: string[] }> {
+  if (updateIds.length === 0) {
+    return { claimContext: "", usedClaimIds: [] };
+  }
+
+  try {
+    // Search for verified claims directly by regulatory update IDs and query
+    const result = await claimRegistryService.searchClaims({
+      status: "verified",
+      regulatoryUpdateIds: updateIds,
+      limit: 20,
+    });
+
+    const relevantClaims = (result.claims || []).slice(0, 15);
+
+    if (relevantClaims.length === 0) {
+      return { claimContext: "", usedClaimIds: [] };
+    }
+
+    const claimContext = relevantClaims.map((c: any, i: number) =>
+      `[CLAIM-${i + 1}] ${c.claimText}
+       -> QUELLE: ${c.sourceCitation || "Unbekannt"}
+       -> KONFIDENZ: ${c.confidenceScore || 50}%
+       -> STATUS: ${c.status}`
+    ).join("\n\n");
+
+    return {
+      claimContext: `
+--- VERIFIED CLAIMS (geprüfte Aussagen) ---
+${claimContext}
+
+⚠️ Zitiere Claims als [CL-1], [CL-2] etc. in deiner Antwort.
+`,
+      usedClaimIds: relevantClaims.map((c: any) => c.id),
+    };
+  } catch (error: any) {
+    logger.warn("Could not load claims for context", { error: error.message });
+    return { claimContext: "", usedClaimIds: [] };
+  }
+}
+
+/**
+ * Store the link between an LLM output and the used claims
+ */
+async function linkOutputToClaims(
+  outputId: string,
+  outputType: "chat_response" | "compliance_report" | "regulatory_analysis",
+  claimIds: string[],
+): Promise<void> {
+  if (claimIds.length === 0) return;
+  try {
+    await claimRegistryService.linkOutputToClaims(
+      claimIds.map((claimId) => ({
+        outputId,
+        outputType,
+        claimId,
+        usageType: "cited",
+      }))
+    );
+  } catch (error: any) {
+    logger.warn("Failed to link output to claims", { error: error.message });
+  }
+}
 
 // Zentrales Modell: per Replit Secret/Env überschreibbar
 const MODEL =
@@ -231,13 +313,46 @@ try {
 async function createChatCompletion(params: {
   messages: { role: "system" | "user"; content: string }[];
   max_tokens: number;
+  temperature?: number;
+  top_p?: number;
 }): Promise<{ response: any; modelUsed: string } | null> {
+  const temperature = params.temperature ?? 0.7;
+  const topP = params.top_p ?? 0.9;
+
   try {
     const response = await client!.chat.completions.create({
       model: MODEL,
       max_tokens: params.max_tokens,
+      temperature,
+      top_p: topP,
       messages: params.messages,
     });
+
+    // Log AI transparency for audit
+    const outputId = `inf_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    try {
+      await aiTransparencyService.logInference({
+        outputId,
+        modelInfo: { name: MODEL, provider: "OpenRouter" },
+        inferenceParams: { temperature, topP, maxTokens: params.max_tokens },
+        prompts: {
+          system: params.messages[0].content,
+          user: params.messages[1]?.content || "",
+          full: params.messages.map((m) => `${m.role}: ${m.content}`).join("\n---\n"),
+        },
+        sourceContext: { sourceIds: [], regulatoryUpdateIds: [], claimIds: [], totalDocuments: 0 },
+        response: {
+          content: response.choices[0]?.message?.content || "",
+          inputTokens: response.usage?.prompt_tokens || 0,
+          outputTokens: response.usage?.completion_tokens || 0,
+        },
+        latencyMs: 0,
+        agentName: "system",
+      });
+    } catch {
+      // Transparency logging is non-blocking
+    }
+
     return { response, modelUsed: MODEL };
   } catch (error: any) {
     logger.warn("Primary model failed, trying backup model", {
@@ -250,6 +365,8 @@ async function createChatCompletion(params: {
       const response = await client!.chat.completions.create({
         model: BACKUP_MODEL,
         max_tokens: params.max_tokens,
+        temperature,
+        top_p: topP,
         messages: params.messages,
       });
       return { response, modelUsed: BACKUP_MODEL };
@@ -743,6 +860,7 @@ async function generalAgent(
   _parameters: Record<string, any>,
 ): Promise<AgentResponse> {
   const startTime = Date.now();
+  const outputId = generateOutputId("general", query);
 
   // Extract keywords: accept 3+ chars (important acronyms like UDI, MDR, FDA, EMA)
   const keywords = query.toLowerCase().match(/[a-zäöüß0-9]{3,}/gi) || [];
@@ -870,7 +988,6 @@ async function generalAgent(
 
     const keywordFilter = or(...keywordConditions);
 
-    // Single broad search across all data sources (no restrictive whitelist)
     allUpdates = await db
       .select({
         id: regulatoryUpdates.id,
@@ -900,25 +1017,38 @@ async function generalAgent(
       .limit(15);
   }
 
+  // Load verified claims for found regulatory updates
+  const updateIds = allUpdates.map((u) => u.id).filter(Boolean);
+  const { claimContext, usedClaimIds } = await buildClaimContext(updateIds, query);
+
   const systemPrompt = `${REGULATORY_INTELLIGENCE_SYSTEM_PROMPT}
 
 **Fokusbereich für diese Anfrage:** Allgemeine, regionenübergreifende regulatorische Auskunft zu Medizinprodukten — kombiniert Erkenntnisse aus allen verfügbaren Quellen und Regionen.`;
 
+  const updatesBlock = allUpdates
+    .map(
+      (u: any) =>
+        `- ${u.title} (${u.sourceId})\n  ${u.description?.substring(0, 100) || "No description"}`,
+    )
+    .join("\n");
+
+  const claimNotice = usedClaimIds.length > 0
+    ? `\n\n📋 GEPRÜFTE CLAIMS VERFÜGBAR: ${usedClaimIds.length} verifizierte Claims. Bevorzuge diese in deiner Antwort.`
+    : "";
+
   const prompt = `User query: "${query}"
 
 Available regulatory updates (from all sources):
-${allUpdates
-  .map(
-    (u: any) =>
-      `- ${u.title} (${u.sourceId})\n  ${u.description?.substring(0, 100) || "No description"}`,
-  )
-  .join("\n")}
+${updatesBlock}${claimContext}${claimNotice}
 
-Provide a helpful, comprehensive response.`;
+Provide a helpful, comprehensive response. Cite claims as [CL-1], [CL-2] where applicable.`;
 
   if (!client && ENABLE_GROQ_FALLBACK) {
     logger.info("General Agent: Using Groq fallback");
     const analysis = await callGroqChatStreaming(prompt, systemPrompt);
+
+    // Link output to claims in background
+    linkOutputToClaims(outputId, "chat_response", usedClaimIds);
 
     return {
       agent: "General",
@@ -945,6 +1075,9 @@ Provide a helpful, comprehensive response.`;
       { role: "user", content: prompt },
     ],
   });
+
+  // Link output to claims in background
+  linkOutputToClaims(outputId, "chat_response", usedClaimIds);
 
   if (!completion) {
     return {
